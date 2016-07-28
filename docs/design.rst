@@ -114,8 +114,8 @@ and a set of network monitoring tools.
 5. Security and resiliency implications:
 ----------------------------------------
 
-5.1. Availability Attacks:
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+5.1. Availability Attacks
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Adversaries can attack the availability of a publicly-proxied hidden
 service at a number of levels:
@@ -140,7 +140,8 @@ service at a number of levels:
   domain. Using nameservers maintained by different providers can provide
   resilience to attacks against a single nameserver provider.
 
-5.2. Security Attacks:
+5.2. Security Attacks
+~~~~~~~~~~~~~~~~~~~~~
 
 Entry proxies and exit relays have a similar ability to monitor and
 interfere with client traffic. This is greater risk of targeted
