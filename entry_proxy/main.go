@@ -11,10 +11,12 @@ See also:
 
 import (
 	"flag"
+	"io"
 	"log"
 	"net"
 	"net/url"
 	"strconv"
+	"sync"
 
 	"github.com/polvi/sni"
 	"golang.org/x/net/proxy"
@@ -38,25 +40,6 @@ func connectToProxy(targetServer string) (net.Conn, error) {
 	}
 	connection, err := dialer.Dial("tcp", targetServer)
 	return connection, err
-}
-
-func netCopy(from, to net.Conn, finished chan<- struct{}) {
-	defer func() {
-		finished <- struct{}{}
-	}()
-	buffer := make([]byte, *bufferSize)
-	for {
-		bytesRead, err := from.Read(buffer)
-		if err != nil {
-			log.Printf("Finished reading: %s", err)
-			break
-		}
-		_, err = to.Write(buffer[:bytesRead])
-		if err != nil {
-			log.Printf("Finished writting: %s", err)
-			break
-		}
-	}
 }
 
 func processRequest(clientConn net.Conn) {
@@ -83,12 +66,17 @@ func processRequest(clientConn net.Conn) {
 		)
 		return
 	}
-	defer serverConn.Close()
-	finished := make(chan struct{})
-	go netCopy(clientConn, serverConn, finished)
-	go netCopy(serverConn, clientConn, finished)
-	<-finished
-	<-finished
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	copyLoop := func(dst, src net.Conn) {
+		defer wg.Done()
+		defer dst.Close()
+		io.Copy(dst, src)
+	}
+	go copyLoop(clientConn, serverConn)
+	go copyLoop(serverConn, clientConn)
+	wg.Wait()
 }
 
 func main() {
