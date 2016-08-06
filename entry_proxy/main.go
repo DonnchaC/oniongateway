@@ -22,7 +22,7 @@ import (
 
 var (
     proxyUrl = flag.String("proxy", "socks5://127.0.0.1:9050", "Proxy URL")
-    listenOn = flag.String("listen-on", "0.0.0.0:443", "Where to listen")
+    listenOn = flag.String("listen-on", ":443", "Where to listen")
     onionPort = flag.Int("onion-port", 443, "Port on onion site to use")
     bufferSize = flag.Int("buffer-size", 1024, "Proxy buffer size, bytes")
 )
