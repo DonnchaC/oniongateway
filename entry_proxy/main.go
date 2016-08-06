@@ -65,6 +65,7 @@ func netCopy(from, to net.Conn, finished chan<- struct{}) {
 
 func processRequest(clientConn net.Conn) {
     defer clientConn.Close()
+    clientConn.SetReadDeadline(time.Now().Add(*timeout))
     hostname, clientConn, err := sni.ServerNameFromConn(clientConn)
     if err != nil {
         log.Printf("Unable to get target server name from SNI: %s", err)
