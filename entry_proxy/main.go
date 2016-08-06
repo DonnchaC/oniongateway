@@ -99,7 +99,7 @@ func main() {
     flag.Parse()
     listener, err := net.Listen("tcp", *listenOn)
     if err != nil {
-        log.Fatal("Unable to listen on %s: %s", *listenOn, err)
+        log.Fatalf("Unable to listen on %s: %s", *listenOn, err)
     }
     for {
         conn, err := listener.Accept()
