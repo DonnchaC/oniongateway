@@ -7,18 +7,25 @@ import (
 	"regexp"
 )
 
-var onionTxtRe *regexp.Regexp
+type OnionResolver interface {
+	ResolveToOnion(string) (string, error)
+}
 
-const SUBMATCH_OF_INTEREST = 2 // see onionTxtRe
+type RealOnionResolver struct {
+	regex *regexp.Regexp
+}
 
-func resolveToOnion(hostname string) (onion string, err error) {
-	if onionTxtRe == nil {
-		// FIXME: races?
-		onionTxtRe, err = regexp.Compile("(^| )onion=([a-z0-9]{16}.onion)( |$)")
-		if err != nil {
-			return
-		}
+func NewRealOnionResolver() *RealOnionResolver {
+	var err error
+	o := RealOnionResolver{}
+	o.regex, err = regexp.Compile("(^| )onion=([a-z0-9]{16}.onion)( |$)")
+	if err != nil {
+		panic("wtf: failed to compile regex")
 	}
+	return &o
+}
+
+func (o *RealOnionResolver) ResolveToOnion(hostname string) (onion string, err error) {
 	txts, err := net.LookupTXT(hostname)
 	if err != nil {
 		return
@@ -28,9 +35,9 @@ func resolveToOnion(hostname string) (onion string, err error) {
 		return
 	}
 	for _, txt := range txts {
-		match := onionTxtRe.FindStringSubmatch(txt)
+		match := o.regex.FindStringSubmatch(txt)
 		if match != nil {
-			return match[SUBMATCH_OF_INTEREST], nil
+			return match[2], nil // the submatch we are interested in
 		}
 	}
 	return "", errors.New(fmt.Sprintf("No suitable TXT records for %s", hostname))

@@ -11,28 +11,55 @@ See also:
 
 import (
 	"flag"
+	"io"
 	"log"
 	"net"
-	"net/url"
 	"strconv"
+	"sync"
 
 	"github.com/polvi/sni"
 	"golang.org/x/net/proxy"
 )
 
-var (
-	proxyUrl   = flag.String("proxy", "socks5://127.0.0.1:9050", "Proxy URL")
-	listenOn   = flag.String("listen-on", ":443", "Where to listen")
-	onionPort  = flag.Int("onion-port", 443, "Port on onion site to use")
-	bufferSize = flag.Int("buffer-size", 1024, "Proxy buffer size, bytes")
-)
+type SNIParser interface {
+	ServerNameFromConn(c net.Conn) (string, net.Conn, error)
+}
 
-func connectToProxy(targetServer string) (net.Conn, error) {
-	parsedUrl, err := url.Parse(*proxyUrl)
-	if err != nil {
-		return nil, err
+type RealSNIParser struct{}
+
+func (t RealSNIParser) ServerNameFromConn(clientConn net.Conn) (string, net.Conn, error) {
+	hostname, clientConn, err := sni.ServerNameFromConn(clientConn)
+	return hostname, clientConn, err
+}
+
+type TLSProxy struct {
+	conn      net.Conn
+	onionPort int
+
+	proxyNet  string
+	proxyAddr string
+
+	sniParser SNIParser
+	resolver  OnionResolver
+}
+
+func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
+	t := TLSProxy{
+		onionPort: onionPort,
+		proxyNet:  proxyNet,
+		proxyAddr: proxyAddr,
+		sniParser: RealSNIParser{},
+		resolver:  NewRealOnionResolver(),
 	}
-	dialer, err := proxy.FromURL(parsedUrl, proxy.Direct)
+	return &t
+}
+
+func (t *TLSProxy) Dial(targetServer string) (net.Conn, error) {
+	auth := proxy.Auth{
+		User:     "",
+		Password: "",
+	}
+	dialer, err := proxy.SOCKS5(t.proxyNet, t.proxyAddr, &auth, proxy.Direct)
 	if err != nil {
 		return nil, err
 	}
@@ -40,67 +67,61 @@ func connectToProxy(targetServer string) (net.Conn, error) {
 	return connection, err
 }
 
-func netCopy(from, to net.Conn, finished chan<- struct{}) {
-	defer func() {
-		finished <- struct{}{}
-	}()
-	buffer := make([]byte, *bufferSize)
-	for {
-		bytesRead, err := from.Read(buffer)
-		if err != nil {
-			log.Printf("Finished reading: %s", err)
-			break
-		}
-		_, err = to.Write(buffer[:bytesRead])
-		if err != nil {
-			log.Printf("Finished writting: %s", err)
-			break
-		}
-	}
-}
-
-func processRequest(clientConn net.Conn) {
+func (t *TLSProxy) ProcessRequest(clientConn net.Conn) {
 	defer clientConn.Close()
-	hostname, clientConn, err := sni.ServerNameFromConn(clientConn)
+	hostname, clientConn, err := t.sniParser.ServerNameFromConn(clientConn)
 	if err != nil {
 		log.Printf("Unable to get target server name from SNI: %s", err)
 		return
 	}
-	onion, err := resolveToOnion(hostname)
+	onion, err := t.resolver.ResolveToOnion(hostname)
 	if err != nil {
 		log.Printf("Unable to resolve %s using DNS TXT: %s", hostname, err)
 		return
 	}
 	log.Printf("%s was resolved to %s", hostname, onion)
-	targetServer := net.JoinHostPort(onion, strconv.Itoa(*onionPort))
-	serverConn, err := connectToProxy(targetServer)
+	targetServer := net.JoinHostPort(onion, strconv.Itoa(t.onionPort))
+	serverConn, err := t.Dial(targetServer)
+
 	if err != nil {
-		log.Printf(
-			"Unable to connect to %s through %s: %s\n",
-			targetServer,
-			*proxyUrl,
-			err,
-		)
+		log.Printf("Unable to connect to %s through %s %s: %s\n", targetServer, t.proxyNet, t.proxyAddr, err)
 		return
 	}
-	defer serverConn.Close()
-	finished := make(chan struct{})
-	go netCopy(clientConn, serverConn, finished)
-	go netCopy(serverConn, clientConn, finished)
-	<-finished
-	<-finished
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	copyLoop := func(dst, src net.Conn) {
+		defer wg.Done()
+		defer dst.Close()
+		io.Copy(dst, src)
+	}
+	go copyLoop(clientConn, serverConn)
+	go copyLoop(serverConn, clientConn)
+	wg.Wait()
 }
 
 func main() {
+
+	var (
+		proxyNet  = flag.String("proxyNet", "tcp", "Proxy network type")
+		proxyAddr = flag.String("proxyAddr", "127.0.0.1:9050", "Proxy address")
+		listenOn  = flag.String("listen-on", ":443", "Where to listen")
+		onionPort = flag.Int("onion-port", 443, "Port on onion site to use")
+	)
+
 	flag.Parse()
+
 	listener, err := net.Listen("tcp", *listenOn)
 	if err != nil {
 		log.Fatalf("Unable to listen on %s: %s", *listenOn, err)
 	}
+
+	proxy := NewTLSProxy(*onionPort, *proxyNet, *proxyAddr)
 	for {
 		conn, err := listener.Accept()
 		if err == nil {
-			go processRequest(conn)
+			go proxy.ProcessRequest(conn)
 		} else {
 			log.Printf("Unable to accept request: %s", err)
 		}
