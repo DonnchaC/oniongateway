@@ -14,7 +14,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"net/url"
 	"strconv"
 	"sync"
 
@@ -22,19 +21,12 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-var (
-	proxyUrl   = flag.String("proxy", "socks5://127.0.0.1:9050", "Proxy URL")
-	listenOn   = flag.String("listen-on", ":443", "Where to listen")
-	onionPort  = flag.Int("onion-port", 443, "Port on onion site to use")
-	bufferSize = flag.Int("buffer-size", 1024, "Proxy buffer size, bytes")
-)
-
-func connectToProxy(targetServer string) (net.Conn, error) {
-	parsedUrl, err := url.Parse(*proxyUrl)
-	if err != nil {
-		return nil, err
+func connectToProxy(targetServer, proxyNet, proxyAddr string) (net.Conn, error) {
+	auth := proxy.Auth{
+		User:     "",
+		Password: "",
 	}
-	dialer, err := proxy.FromURL(parsedUrl, proxy.Direct)
+	dialer, err := proxy.SOCKS5(proxyNet, proxyAddr, &auth, proxy.Direct)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +34,7 @@ func connectToProxy(targetServer string) (net.Conn, error) {
 	return connection, err
 }
 
-func processRequest(clientConn net.Conn) {
+func processRequest(clientConn net.Conn, onionPort int, proxyNet, proxyAddr string) {
 	defer clientConn.Close()
 	hostname, clientConn, err := sni.ServerNameFromConn(clientConn)
 	if err != nil {
@@ -55,17 +47,14 @@ func processRequest(clientConn net.Conn) {
 		return
 	}
 	log.Printf("%s was resolved to %s", hostname, onion)
-	targetServer := net.JoinHostPort(onion, strconv.Itoa(*onionPort))
-	serverConn, err := connectToProxy(targetServer)
+	targetServer := net.JoinHostPort(onion, strconv.Itoa(onionPort))
+	serverConn, err := connectToProxy(targetServer, proxyNet, proxyAddr)
+
 	if err != nil {
-		log.Printf(
-			"Unable to connect to %s through %s: %s\n",
-			targetServer,
-			*proxyUrl,
-			err,
-		)
+		log.Printf("Unable to connect to %s through %s %s: %s\n", targetServer, proxyNet, proxyAddr, err)
 		return
 	}
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -80,15 +69,25 @@ func processRequest(clientConn net.Conn) {
 }
 
 func main() {
+
+	var (
+		proxyNet  = flag.String("proxyNet", "tcp", "Proxy network type")
+		proxyAddr = flag.String("proxyAddr", "127.0.0.1:9050", "Proxy address")
+		listenOn  = flag.String("listen-on", ":443", "Where to listen")
+		onionPort = flag.Int("onion-port", 443, "Port on onion site to use")
+	)
+
 	flag.Parse()
+
 	listener, err := net.Listen("tcp", *listenOn)
 	if err != nil {
 		log.Fatalf("Unable to listen on %s: %s", *listenOn, err)
 	}
+
 	for {
 		conn, err := listener.Accept()
 		if err == nil {
-			go processRequest(conn)
+			go processRequest(conn, *onionPort, *proxyNet, *proxyAddr)
 		} else {
 			log.Printf("Unable to accept request: %s", err)
 		}
