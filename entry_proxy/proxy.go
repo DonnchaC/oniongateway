@@ -63,6 +63,7 @@ type TLSProxy struct {
 	sniParser SNIParser
 	resolver  HostToOnionResolver
 	dialer    ProxyDialer
+	listener  net.Listener
 }
 
 func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
@@ -77,20 +78,27 @@ func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
 	return &t
 }
 
-func (t *TLSProxy) Start(listenNet, listenAddr string) {
+func (t *TLSProxy) Listen(listenNet, listenAddr string) {
 	listener, err := net.Listen(listenNet, listenAddr)
+	t.listener = listener
 	if err != nil {
 		log.Fatalf("Unable to listen on %s %s: %s", listenNet, listenAddr, err)
 	}
+}
+
+func (t *TLSProxy) Start() {
 	for {
-		conn, err := listener.Accept()
+		conn, err := t.listener.Accept()
 		if err == nil {
 			go t.ProcessRequest(conn)
 		} else {
 			log.Printf("Unable to accept request: %s", err)
 		}
 	}
+}
 
+func (t *TLSProxy) Addr() net.Addr {
+	return t.listener.Addr()
 }
 
 func (t *TLSProxy) ProcessRequest(clientConn net.Conn) {

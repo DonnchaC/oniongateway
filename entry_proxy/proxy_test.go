@@ -183,17 +183,18 @@ func (d *MockProxyDialer) Dial(targetServer string) (net.Conn, error) {
 
 func TestTLSProxy(t *testing.T) {
 	fakeTorNet := "tcp"
-	fakeTorAddr := "127.0.0.1:34628"
-	fakeTorListener := NewAccumulatingListener(fakeTorNet, fakeTorAddr)
+	fakeTorListener := NewAccumulatingListener(fakeTorNet, "127.0.0.1:0")
 	fakeTorListener.Start()
+	fakeTorAddr := fakeTorListener.mortalService.listener.Addr().String()
 
 	proxyNet := "tcp"
-	proxyAddr := "127.0.0.1:44333"
 	proxy := NewTLSProxy(443, fakeTorNet, fakeTorAddr)
 	proxy.sniParser = MockSNIParser{}
 	proxy.resolver.txtResolver = MockTxtResolver{}
 	proxy.dialer = NewMockProxyDialer(fakeTorNet, fakeTorAddr)
-	go proxy.Start(proxyNet, proxyAddr)
+	proxy.Listen(proxyNet, "127.0.0.1:0")
+	go proxy.Start()
+	proxyAddr := proxy.Addr().String()
 
 	conn, err := net.Dial(proxyNet, proxyAddr)
 	if err != nil {
