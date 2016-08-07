@@ -35,9 +35,12 @@ func (t RealSNIParser) ServerNameFromConn(clientConn net.Conn) (string, net.Conn
 type TLSProxy struct {
 	conn      net.Conn
 	onionPort int
+
 	proxyNet  string
 	proxyAddr string
+
 	sniParser SNIParser
+	resolver  OnionResolver
 }
 
 func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
@@ -46,6 +49,7 @@ func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
 		proxyNet:  proxyNet,
 		proxyAddr: proxyAddr,
 		sniParser: RealSNIParser{},
+		resolver:  NewRealOnionResolver(),
 	}
 	return &t
 }
@@ -70,7 +74,7 @@ func (t *TLSProxy) ProcessRequest(clientConn net.Conn) {
 		log.Printf("Unable to get target server name from SNI: %s", err)
 		return
 	}
-	onion, err := resolveToOnion(hostname)
+	onion, err := t.resolver.ResolveToOnion(hostname)
 	if err != nil {
 		log.Printf("Unable to resolve %s using DNS TXT: %s", hostname, err)
 		return
