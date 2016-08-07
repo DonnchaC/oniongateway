@@ -145,7 +145,8 @@ func (a *AccumulatingListener) SessionWorker(conn net.Conn) error {
 			//fmt.Println("AccumulatingListener read error:", err)
 		}
 		lineStr := strings.TrimSpace(string(line))
-		a.buffer.WriteString(lineStr + "\n")
+		fmt.Printf("line:-%s- lineStr:-%s-\n", line, lineStr)
+		a.buffer.WriteString(string(line))
 		a.Received <- true
 	}
 	return nil
