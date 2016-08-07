@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strings"
 	"sync"
 	"testing"
 )
@@ -139,13 +138,11 @@ func (a *AccumulatingListener) Stop() {
 func (a *AccumulatingListener) SessionWorker(conn net.Conn) error {
 	connReader := bufio.NewReader(conn)
 	for {
-
 		line, err := connReader.ReadBytes('\n')
 		if err != nil {
-			//fmt.Println("AccumulatingListener read error:", err)
+			fmt.Println("AccumulatingListener read error:", err)
 		}
-		lineStr := strings.TrimSpace(string(line))
-		fmt.Printf("line:-%s- lineStr:-%s-\n", line, lineStr)
+		fmt.Printf("receive line: %x\n", line)
 		a.buffer.WriteString(string(line))
 		a.Received <- true
 	}
@@ -204,6 +201,7 @@ func TestTLSProxy(t *testing.T) {
 	}
 
 	want := "meow\n"
+	fmt.Printf("sending string: %x\n", want)
 	n, err := conn.Write([]byte(want))
 	if err != nil {
 		t.Errorf("failed to write: %s", err)
@@ -214,9 +212,10 @@ func TestTLSProxy(t *testing.T) {
 			t.Fail()
 		}
 	}
+
 	<-fakeTorListener.Received
 	if fakeTorListener.buffer.String() != want {
-		t.Errorf("got:\n-%s-\n\nbut expected:\n-%s-", fakeTorListener.buffer.String(), want)
+		t.Errorf("got:%x but expected:%x", fakeTorListener.buffer.String(), want)
 		t.Fail()
 	}
 	fakeTorListener.Stop()
