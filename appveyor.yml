@@ -1,0 +1,25 @@
+clone_folder: c:\gopath\src\github.com\DonnchaC\oniongateway
+
+environment:
+  GOPATH: c:\gopath
+
+install:
+  - echo %PATH%
+  - echo %GOPATH%
+  - go version
+  - go env
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
+
+build_script:
+  - go get github.com/DonnchaC/oniongateway/entry_proxy
+  - >
+      go test -v
+      github.com/DonnchaC/oniongateway/entry_proxy
+      -covermode=count
+      -coverprofile=coverage.out
+  - >
+      %GOPATH%/bin/goveralls
+      -coverprofile=coverage.out
+      -service=appveyor-ci
+      -repotoken=%COVERALLS_TOKEN%
