@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"net"
 	"strings"
 	"sync"
@@ -39,7 +40,7 @@ func NewMortalService(network, address string, connectionCallback func(net.Conn)
 // Start the MortalService
 func (l *MortalService) Start() error {
 	var err error
-	log.Debugf("starting listener service %s:%s", l.network, l.address)
+	log.Printf("starting listener service %s:%s", l.network, l.address)
 	l.listener, err = net.Listen(l.network, l.address)
 	if err != nil {
 		return err
@@ -51,7 +52,7 @@ func (l *MortalService) Start() error {
 
 // Stop will kill our listener and all it's connections
 func (l *MortalService) Stop() {
-	log.Debugf("stopping listener service %s:%s", l.network, l.address)
+	log.Printf("stopping listener service %s:%s", l.network, l.address)
 	l.stopping = true
 	if l.listener != nil {
 		l.listener.Close()
@@ -62,10 +63,10 @@ func (l *MortalService) Stop() {
 func (l *MortalService) acceptLoop() {
 	defer l.waitGroup.Done()
 	defer func() {
-		log.Debugf("acceptLoop stopping for listener service %s:%s", l.network, l.address)
+		log.Printf("acceptLoop stopping for listener service %s:%s", l.network, l.address)
 		for i, conn := range l.conns {
 			if conn != nil {
-				log.Debugf("Closing connection #%d", i)
+				log.Printf("Closing connection #%d", i)
 				conn.Close()
 			}
 		}
@@ -75,7 +76,7 @@ func (l *MortalService) acceptLoop() {
 	for {
 		conn, err := l.listener.Accept()
 		if err != nil {
-			log.Errorf("MortalService connection accept failure: %s\n", err)
+			log.Printf("MortalService connection accept failure: %s\n", err)
 			if l.stopping {
 				return
 			} else {
@@ -90,12 +91,12 @@ func (l *MortalService) acceptLoop() {
 
 func (l *MortalService) handleConnection(conn net.Conn, id int) error {
 	defer func() {
-		log.Debugf("Closing connection #%d", id)
+		log.Printf("Closing connection #%d", id)
 		conn.Close()
 		l.conns[id] = nil
 	}()
 
-	log.Debugf("Starting connection #%d", id)
+	log.Printf("Starting connection #%d", id)
 	if err := l.connectionCallback(conn); err != nil {
 		return err
 	}
