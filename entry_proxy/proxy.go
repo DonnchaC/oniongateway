@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"sync"
@@ -22,6 +21,37 @@ func (t RealSNIParser) ServerNameFromConn(clientConn net.Conn) (string, net.Conn
 	return hostname, clientConn, err
 }
 
+type ProxyDialer interface {
+	Dial(string) (net.Conn, error)
+}
+
+type SocksDialer struct {
+	proxyNet  string
+	proxyAddr string
+	auth      proxy.Auth
+}
+
+func NewSocksDialer(proxyNet, proxyAddr string) *SocksDialer {
+	s := SocksDialer{
+		proxyNet:  proxyNet,
+		proxyAddr: proxyAddr,
+		auth: proxy.Auth{
+			User:     "",
+			Password: "",
+		},
+	}
+	return &s
+}
+
+func (t *SocksDialer) Dial(targetServer string) (net.Conn, error) {
+	dialer, err := proxy.SOCKS5(t.proxyNet, t.proxyAddr, &t.auth, proxy.Direct)
+	if err != nil {
+		return nil, err
+	}
+	connection, err := dialer.Dial("tcp", targetServer)
+	return connection, err
+}
+
 type TLSProxy struct {
 	conn      net.Conn
 	onionPort int
@@ -31,6 +61,7 @@ type TLSProxy struct {
 
 	sniParser SNIParser
 	resolver  OnionResolver
+	dialer    ProxyDialer
 }
 
 func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
@@ -40,6 +71,7 @@ func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
 		proxyAddr: proxyAddr,
 		sniParser: RealSNIParser{},
 		resolver:  NewRealOnionResolver(),
+		dialer:    NewSocksDialer(proxyNet, proxyAddr),
 	}
 	return &t
 }
@@ -54,43 +86,30 @@ func (t *TLSProxy) Start(listenNet, listenAddr string) {
 		if err == nil {
 			go t.ProcessRequest(conn)
 		} else {
-			log.Printf("Unable to accept request: %s", err)
+			log.Infof("Unable to accept request: %s", err)
 		}
 	}
 
-}
-
-func (t *TLSProxy) Dial(targetServer string) (net.Conn, error) {
-	auth := proxy.Auth{
-		User:     "",
-		Password: "",
-	}
-	dialer, err := proxy.SOCKS5(t.proxyNet, t.proxyAddr, &auth, proxy.Direct)
-	if err != nil {
-		return nil, err
-	}
-	connection, err := dialer.Dial("tcp", targetServer)
-	return connection, err
 }
 
 func (t *TLSProxy) ProcessRequest(clientConn net.Conn) {
 	defer clientConn.Close()
 	hostname, clientConn, err := t.sniParser.ServerNameFromConn(clientConn)
 	if err != nil {
-		log.Printf("Unable to get target server name from SNI: %s", err)
+		log.Infof("Unable to get target server name from SNI: %s", err)
 		return
 	}
 	onion, err := t.resolver.ResolveToOnion(hostname)
 	if err != nil {
-		log.Printf("Unable to resolve %s using DNS TXT: %s", hostname, err)
+		log.Infof("Unable to resolve %s using DNS TXT: %s", hostname, err)
 		return
 	}
-	log.Printf("%s was resolved to %s", hostname, onion)
+	log.Infof("%s was resolved to %s", hostname, onion)
 	targetServer := net.JoinHostPort(onion, strconv.Itoa(t.onionPort))
-	serverConn, err := t.Dial(targetServer)
+	serverConn, err := t.dialer.Dial(targetServer)
 
 	if err != nil {
-		log.Printf("Unable to connect to %s through %s %s: %s\n", targetServer, t.proxyNet, t.proxyAddr, err)
+		log.Infof("Unable to connect to %s through %s %s: %s\n", targetServer, t.proxyNet, t.proxyAddr, err)
 		return
 	}
 
