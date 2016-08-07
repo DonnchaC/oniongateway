@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -9,10 +8,6 @@ import (
 	"net/http"
 	"strings"
 )
-
-func errorf(message string, args ...interface{}) error {
-	return errors.New(fmt.Sprintf(message, args...))
-}
 
 type Rule struct {
 	Url          string
@@ -39,7 +34,7 @@ func (c *Checker) makeHttpClient(address string) (http.Client, error) {
 
 func (c *Checker) chooseRule() (Rule, error) {
 	if len(c.Rules) == 0 {
-		return Rule{}, errors.New("Set of rules to check is empty")
+		return Rule{}, fmt.Errorf("Set of rules to check is empty")
 	}
 	ruleIndex := rand.Intn(len(c.Rules))
 	return c.Rules[ruleIndex], nil
@@ -60,7 +55,7 @@ func getResponse(rule Rule, client http.Client) (string, error) {
 
 func checkResponse(rule Rule, body string) error {
 	if !strings.Contains(body, rule.ExpectedText) {
-		return errorf(
+		return fmt.Errorf(
 			"Responce body %q of URL %s does not contain expected text %q",
 			body,
 			rule.Url,
@@ -73,18 +68,18 @@ func checkResponse(rule Rule, body string) error {
 func (c *Checker) CheckEntryProxy(address string) error {
 	client, err := c.makeHttpClient(address)
 	if err != nil {
-		return errorf("Unable to create HTTP client: %s", err)
+		return fmt.Errorf("Unable to create HTTP client: %s", err)
 	}
 	rule, err := c.chooseRule()
 	if err != nil {
-		return errorf("Unable to choose rule: %s", err)
+		return fmt.Errorf("Unable to choose rule: %s", err)
 	}
 	body, err := getResponse(rule, client)
 	if err != nil {
-		return errorf("Unable to get download: %s", err)
+		return fmt.Errorf("Unable to get download: %s", err)
 	}
 	if err := checkResponse(rule, body); err != nil {
-		return errorf("Check failed: %s", err)
+		return fmt.Errorf("Check failed: %s", err)
 	}
 	return nil
 }
