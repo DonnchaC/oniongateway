@@ -10,15 +10,19 @@ import (
 
 const anyProxy = "1.2.3.4:5678"
 
-func makeMockChecker(expectedText, observedText string) *Checker {
+func makeHttpServer(observedText string) *httptest.Server {
 	// TODO NewTLSServer
-	ts := httptest.NewServer(
+	return httptest.NewServer(
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprintln(w, observedText)
 			},
 		),
 	)
+}
+
+func makeMockChecker(expectedText, observedText string) *Checker {
+	ts := makeHttpServer(observedText)
 	return &Checker{
 		Rules: []Rule{
 			{"http://example.com/", expectedText},
@@ -40,6 +44,38 @@ func TestCheckEntryProxy(t *testing.T) {
 func TestCheckEntryProxyFail(t *testing.T) {
 	checker := makeMockChecker("expected", "observed")
 	err := checker.CheckEntryProxy(anyProxy)
+	if err == nil {
+		t.Fatalf("checker did not fail with bad entry_proxy: %s", err)
+	}
+}
+
+func makeRealChecker(
+	expectedText, observedText string,
+) (
+	checker *Checker,
+	proxy string,
+) {
+	ts := makeHttpServer(observedText)
+	checker = &Checker{
+		Rules: []Rule{
+			{"http://example.com/", expectedText},
+		},
+	}
+	proxy = ts.Listener.Addr().String()
+	return
+}
+
+func TestCheckEntryProxyReal(t *testing.T) {
+	checker, proxy := makeRealChecker("test passed", "test passed")
+	err := checker.CheckEntryProxy(proxy)
+	if err != nil {
+		t.Fatalf("Always passing test failed: %s", err)
+	}
+}
+
+func TestCheckEntryProxyRealFail(t *testing.T) {
+	checker, proxy := makeRealChecker("expected", "observed")
+	err := checker.CheckEntryProxy(proxy)
 	if err == nil {
 		t.Fatalf("checker did not fail with bad entry_proxy: %s", err)
 	}
