@@ -61,7 +61,7 @@ type TLSProxy struct {
 	proxyAddr string
 
 	sniParser SNIParser
-	resolver  OnionResolver
+	resolver  HostToOnionResolver
 	dialer    ProxyDialer
 }
 
@@ -71,7 +71,7 @@ func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
 		proxyNet:  proxyNet,
 		proxyAddr: proxyAddr,
 		sniParser: RealSNIParser{},
-		resolver:  NewRealOnionResolver(),
+		resolver:  NewHostToOnionResolver(),
 		dialer:    NewSocksDialer(proxyNet, proxyAddr),
 	}
 	return &t
