@@ -24,5 +24,6 @@ func main() {
 	flag.Parse()
 
 	proxy := NewTLSProxy(*onionPort, *proxyNet, *proxyAddr)
-	proxy.Start("tcp", *listenOn)
+	proxy.Listen("tcp", *listenOn)
+	proxy.Start()
 }
