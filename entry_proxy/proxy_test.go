@@ -203,7 +203,16 @@ func TestTLSProxy(t *testing.T) {
 	}
 
 	want := "meow\n"
-	fmt.Fprint(conn, want)
+	n, err := conn.Write([]byte(want))
+	if err != nil {
+		t.Errorf("failed to write: %s", err)
+		t.Fail()
+	} else {
+		if n != len(want) {
+			t.Error("failed to write full length of buffer")
+			t.Fail()
+		}
+	}
 	<-fakeTorListener.Received
 	if fakeTorListener.buffer.String() != want {
 		t.Errorf("got:\n-%s-\n\nbut expected:\n-%s-", fakeTorListener.buffer.String(), want)
