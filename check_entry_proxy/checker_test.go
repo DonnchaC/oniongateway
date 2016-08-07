@@ -21,11 +21,11 @@ func makeHttpServer(observedText string) *httptest.Server {
 	)
 }
 
-func makeMockChecker(expectedText, observedText string) *Checker {
+func makeMockChecker(expectedText, observedText, url string) *Checker {
 	ts := makeHttpServer(observedText)
 	return &Checker{
 		Rules: []Rule{
-			{"http://example.com/", expectedText},
+			{url, expectedText},
 		},
 		Dial: func(network, addr string) (net.Conn, error) {
 			return net.Dial(network, ts.Listener.Addr().String())
@@ -34,15 +34,35 @@ func makeMockChecker(expectedText, observedText string) *Checker {
 }
 
 func TestCheckEntryProxy(t *testing.T) {
-	checker := makeMockChecker("test passed", "test passed")
+	checker := makeMockChecker(
+		"test passed",
+		"test passed",
+		"http://example.com/",
+	)
 	err := checker.CheckEntryProxy(anyProxy)
 	if err != nil {
 		t.Fatalf("Always passing test failed: %s", err)
 	}
 }
 
-func TestCheckEntryProxyFail(t *testing.T) {
-	checker := makeMockChecker("expected", "observed")
+func TestCheckEntryProxyFailNotContains(t *testing.T) {
+	checker := makeMockChecker(
+		"expected",
+		"observed",
+		"http://example.com/",
+	)
+	err := checker.CheckEntryProxy(anyProxy)
+	if err == nil {
+		t.Fatalf("checker did not fail with bad entry_proxy: %s", err)
+	}
+}
+
+func TestCheckEntryProxyFailDownloading(t *testing.T) {
+	checker := makeMockChecker(
+		"expected",
+		"observed",
+		"https://example.com/",
+	)
 	err := checker.CheckEntryProxy(anyProxy)
 	if err == nil {
 		t.Fatalf("checker did not fail with bad entry_proxy: %s", err)
