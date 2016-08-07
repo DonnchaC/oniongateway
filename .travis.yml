@@ -6,5 +6,19 @@ go:
   - 1.5
   - 1.6
 
+install:
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
+
 script:
-  - go test github.com/DonnchaC/oniongateway/entry_proxy
+  - go get github.com/DonnchaC/oniongateway/entry_proxy
+  - >
+      go test -v
+      github.com/DonnchaC/oniongateway/entry_proxy
+      -covermode=count
+      -coverprofile=coverage.out
+  - >
+      $GOPATH/bin/goveralls
+      -coverprofile=coverage.out
+      -service=travis-ci
+      -repotoken=$COVERALLS_TOKEN
