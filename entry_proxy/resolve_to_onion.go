@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -41,7 +40,7 @@ func (o *HostToOnionResolver) ResolveToOnion(hostname string) (onion string, err
 		return
 	}
 	if len(txts) == 0 {
-		err = errors.New(fmt.Sprintf("No TXT records for %s", hostname))
+		err = fmt.Errorf("No TXT records for %s", hostname)
 		return
 	}
 	for _, txt := range txts {
@@ -50,5 +49,5 @@ func (o *HostToOnionResolver) ResolveToOnion(hostname string) (onion string, err
 			return match[2], nil // the submatch we are interested in
 		}
 	}
-	return "", errors.New(fmt.Sprintf("No suitable TXT records for %s", hostname))
+	return "", fmt.Errorf("No suitable TXT records for %s", hostname)
 }

@@ -78,9 +78,8 @@ func (l *MortalService) acceptLoop() {
 			log.Printf("MortalService connection accept failure: %s\n", err)
 			if l.stopping {
 				return
-			} else {
-				continue
 			}
+			continue
 		}
 
 		l.conns = append(l.conns, conn)
