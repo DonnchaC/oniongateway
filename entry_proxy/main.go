@@ -21,11 +21,23 @@ import (
 	"golang.org/x/net/proxy"
 )
 
+type SNIParser interface {
+	ServerNameFromConn(c net.Conn) (string, net.Conn, error)
+}
+
+type RealSNIParser struct{}
+
+func (t RealSNIParser) ServerNameFromConn(clientConn net.Conn) (string, net.Conn, error) {
+	hostname, clientConn, err := sni.ServerNameFromConn(clientConn)
+	return hostname, clientConn, err
+}
+
 type TLSProxy struct {
 	conn      net.Conn
 	onionPort int
 	proxyNet  string
 	proxyAddr string
+	sniParser SNIParser
 }
 
 func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
@@ -33,6 +45,7 @@ func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
 		onionPort: onionPort,
 		proxyNet:  proxyNet,
 		proxyAddr: proxyAddr,
+		sniParser: RealSNIParser{},
 	}
 	return &t
 }
@@ -52,7 +65,7 @@ func (t *TLSProxy) Dial(targetServer string) (net.Conn, error) {
 
 func (t *TLSProxy) ProcessRequest(clientConn net.Conn) {
 	defer clientConn.Close()
-	hostname, clientConn, err := sni.ServerNameFromConn(clientConn)
+	hostname, clientConn, err := t.sniParser.ServerNameFromConn(clientConn)
 	if err != nil {
 		log.Printf("Unable to get target server name from SNI: %s", err)
 		return
