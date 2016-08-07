@@ -201,11 +201,9 @@ func TestTLSProxy(t *testing.T) {
 		t.Fail()
 	}
 
-	fmt.Fprint(conn, "meow\r\n")
-
-	<-fakeTorListener.Received
-
 	want := "meow\n"
+	fmt.Fprint(conn, want)
+	<-fakeTorListener.Received
 	if fakeTorListener.buffer.String() != want {
 		t.Errorf("got:\n-%s-\n\nbut expected:\n-%s-", fakeTorListener.buffer.String(), want)
 		t.Fail()
