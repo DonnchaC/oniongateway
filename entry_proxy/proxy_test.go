@@ -203,7 +203,7 @@ func TestTLSProxy(t *testing.T) {
 	}
 
 	want := "meow\n"
-	n, err := conn.Write([]byte(meow))
+	n, err := conn.Write([]byte(want))
 	if err != nil {
 		t.Errorf("failed to write: %s", err)
 		t.Fail()
