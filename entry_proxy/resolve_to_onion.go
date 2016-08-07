@@ -7,26 +7,36 @@ import (
 	"regexp"
 )
 
-type OnionResolver interface {
-	ResolveToOnion(string) (string, error)
+type TxtResolver interface {
+	LookupTXT(string) ([]string, error)
 }
 
-type RealOnionResolver struct {
-	regex *regexp.Regexp
+type RealTxtResolver struct{}
+
+func (r RealTxtResolver) LookupTXT(hostname string) ([]string, error) {
+	txts, err := net.LookupTXT(hostname)
+	return txts, err
 }
 
-func NewRealOnionResolver() *RealOnionResolver {
+type HostToOnionResolver struct {
+	regex       *regexp.Regexp
+	txtResolver TxtResolver
+}
+
+func NewHostToOnionResolver() HostToOnionResolver {
 	var err error
-	o := RealOnionResolver{}
+	o := HostToOnionResolver{
+		txtResolver: RealTxtResolver{},
+	}
 	o.regex, err = regexp.Compile("(^| )onion=([a-z0-9]{16}.onion)( |$)")
 	if err != nil {
 		panic("wtf: failed to compile regex")
 	}
-	return &o
+	return o
 }
 
-func (o *RealOnionResolver) ResolveToOnion(hostname string) (onion string, err error) {
-	txts, err := net.LookupTXT(hostname)
+func (o *HostToOnionResolver) ResolveToOnion(hostname string) (onion string, err error) {
+	txts, err := o.txtResolver.LookupTXT(hostname)
 	if err != nil {
 		return
 	}
