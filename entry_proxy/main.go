@@ -21,12 +21,28 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-func connectToProxy(targetServer, proxyNet, proxyAddr string) (net.Conn, error) {
+type TLSProxy struct {
+	conn      net.Conn
+	onionPort int
+	proxyNet  string
+	proxyAddr string
+}
+
+func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
+	t := TLSProxy{
+		onionPort: onionPort,
+		proxyNet:  proxyNet,
+		proxyAddr: proxyAddr,
+	}
+	return &t
+}
+
+func (t *TLSProxy) Dial(targetServer string) (net.Conn, error) {
 	auth := proxy.Auth{
 		User:     "",
 		Password: "",
 	}
-	dialer, err := proxy.SOCKS5(proxyNet, proxyAddr, &auth, proxy.Direct)
+	dialer, err := proxy.SOCKS5(t.proxyNet, t.proxyAddr, &auth, proxy.Direct)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +50,7 @@ func connectToProxy(targetServer, proxyNet, proxyAddr string) (net.Conn, error) 
 	return connection, err
 }
 
-func processRequest(clientConn net.Conn, onionPort int, proxyNet, proxyAddr string) {
+func (t *TLSProxy) ProcessRequest(clientConn net.Conn) {
 	defer clientConn.Close()
 	hostname, clientConn, err := sni.ServerNameFromConn(clientConn)
 	if err != nil {
@@ -47,11 +63,11 @@ func processRequest(clientConn net.Conn, onionPort int, proxyNet, proxyAddr stri
 		return
 	}
 	log.Printf("%s was resolved to %s", hostname, onion)
-	targetServer := net.JoinHostPort(onion, strconv.Itoa(onionPort))
-	serverConn, err := connectToProxy(targetServer, proxyNet, proxyAddr)
+	targetServer := net.JoinHostPort(onion, strconv.Itoa(t.onionPort))
+	serverConn, err := t.Dial(targetServer)
 
 	if err != nil {
-		log.Printf("Unable to connect to %s through %s %s: %s\n", targetServer, proxyNet, proxyAddr, err)
+		log.Printf("Unable to connect to %s through %s %s: %s\n", targetServer, t.proxyNet, t.proxyAddr, err)
 		return
 	}
 
@@ -84,10 +100,11 @@ func main() {
 		log.Fatalf("Unable to listen on %s: %s", *listenOn, err)
 	}
 
+	proxy := NewTLSProxy(*onionPort, *proxyNet, *proxyAddr)
 	for {
 		conn, err := listener.Accept()
 		if err == nil {
-			go processRequest(conn, *onionPort, *proxyNet, *proxyAddr)
+			go proxy.ProcessRequest(conn)
 		} else {
 			log.Printf("Unable to accept request: %s", err)
 		}
