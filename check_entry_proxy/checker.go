@@ -9,24 +9,25 @@ import (
 	"strings"
 )
 
+// Rule for checker: URL and text expected to be found in response
 type Rule struct {
-	Url          string
+	URL          string
 	ExpectedText string
 }
 
+// Checker for entry_proxy
 type Checker struct {
 	Rules []Rule
 	Dial  func(network, addr string) (net.Conn, error)
 }
 
-func (c *Checker) makeHttpClient(address string) (http.Client, error) {
+func (c *Checker) makeHTTPClient(address string) (http.Client, error) {
 	transport := &http.Transport{
 		Dial: func(network, _ string) (net.Conn, error) {
 			if c.Dial != nil {
 				return c.Dial(network, address)
-			} else {
-				return net.Dial(network, address)
 			}
+			return net.Dial(network, address)
 		},
 	}
 	return http.Client{Transport: transport}, nil
@@ -41,7 +42,7 @@ func (c *Checker) chooseRule() (Rule, error) {
 }
 
 func getResponse(rule Rule, client http.Client) (string, error) {
-	response, err := client.Get(rule.Url)
+	response, err := client.Get(rule.URL)
 	if err != nil {
 		return "", err
 	}
@@ -58,15 +59,16 @@ func checkResponse(rule Rule, body string) error {
 		return fmt.Errorf(
 			"Responce body %q of URL %s does not contain expected text %q",
 			body,
-			rule.Url,
+			rule.URL,
 			rule.ExpectedText,
 		)
 	}
 	return nil
 }
 
+// CheckEntryProxy checks entry_proxy instance
 func (c *Checker) CheckEntryProxy(address string) error {
-	client, err := c.makeHttpClient(address)
+	client, err := c.makeHTTPClient(address)
 	if err != nil {
 		return fmt.Errorf("Unable to create HTTP client: %s", err)
 	}

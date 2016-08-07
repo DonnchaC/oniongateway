@@ -10,7 +10,7 @@ import (
 
 const anyProxy = "1.2.3.4:5678"
 
-func makeHttpServer(observedText string) *httptest.Server {
+func makeHTTPServer(observedText string) *httptest.Server {
 	// TODO NewTLSServer
 	return httptest.NewServer(
 		http.HandlerFunc(
@@ -22,7 +22,7 @@ func makeHttpServer(observedText string) *httptest.Server {
 }
 
 func makeMockChecker(expectedText, observedText, url string) *Checker {
-	ts := makeHttpServer(observedText)
+	ts := makeHTTPServer(observedText)
 	return &Checker{
 		Rules: []Rule{
 			{url, expectedText},
@@ -75,7 +75,7 @@ func makeRealChecker(
 	checker *Checker,
 	proxy string,
 ) {
-	ts := makeHttpServer(observedText)
+	ts := makeHTTPServer(observedText)
 	checker = &Checker{
 		Rules: []Rule{
 			{"http://example.com/", expectedText},
