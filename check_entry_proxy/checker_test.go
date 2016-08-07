@@ -8,19 +8,18 @@ import (
 	"testing"
 )
 
-const expectedText = "test passed"
 const anyProxy = "1.2.3.4:5678"
 
-func TestCheckEntryProxy(t *testing.T) {
+func makeMockChecker(expectedText, observedText string) *Checker {
 	// TODO NewTLSServer
 	ts := httptest.NewServer(
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintln(w, expectedText)
+				fmt.Fprintln(w, observedText)
 			},
 		),
 	)
-	checker := &Checker{
+	return &Checker{
 		Rules: []Rule{
 			{"http://example.com/", expectedText},
 		},
@@ -28,9 +27,21 @@ func TestCheckEntryProxy(t *testing.T) {
 			return net.Dial(network, ts.Listener.Addr().String())
 		},
 	}
+}
+
+func TestCheckEntryProxy(t *testing.T) {
+	checker := makeMockChecker("test passed", "test passed")
 	err := checker.CheckEntryProxy(anyProxy)
 	if err != nil {
 		t.Fatalf("Always passing test failed: %s", err)
+	}
+}
+
+func TestCheckEntryProxyFail(t *testing.T) {
+	checker := makeMockChecker("expected", "observed")
+	err := checker.CheckEntryProxy(anyProxy)
+	if err == nil {
+		t.Fatalf("checker did not fail with bad entry_proxy: %s", err)
 	}
 }
 
