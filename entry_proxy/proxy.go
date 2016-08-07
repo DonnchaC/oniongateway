@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"log"
 	"net"
 	"strconv"
 	"sync"
@@ -86,7 +87,7 @@ func (t *TLSProxy) Start(listenNet, listenAddr string) {
 		if err == nil {
 			go t.ProcessRequest(conn)
 		} else {
-			log.Infof("Unable to accept request: %s", err)
+			log.Printf("Unable to accept request: %s", err)
 		}
 	}
 
@@ -96,20 +97,20 @@ func (t *TLSProxy) ProcessRequest(clientConn net.Conn) {
 	defer clientConn.Close()
 	hostname, clientConn, err := t.sniParser.ServerNameFromConn(clientConn)
 	if err != nil {
-		log.Infof("Unable to get target server name from SNI: %s", err)
+		log.Printf("Unable to get target server name from SNI: %s", err)
 		return
 	}
 	onion, err := t.resolver.ResolveToOnion(hostname)
 	if err != nil {
-		log.Infof("Unable to resolve %s using DNS TXT: %s", hostname, err)
+		log.Printf("Unable to resolve %s using DNS TXT: %s", hostname, err)
 		return
 	}
-	log.Infof("%s was resolved to %s", hostname, onion)
+	log.Printf("%s was resolved to %s", hostname, onion)
 	targetServer := net.JoinHostPort(onion, strconv.Itoa(t.onionPort))
 	serverConn, err := t.dialer.Dial(targetServer)
 
 	if err != nil {
-		log.Infof("Unable to connect to %s through %s %s: %s\n", targetServer, t.proxyNet, t.proxyAddr, err)
+		log.Printf("Unable to connect to %s through %s %s: %s\n", targetServer, t.proxyNet, t.proxyAddr, err)
 		return
 	}
 
