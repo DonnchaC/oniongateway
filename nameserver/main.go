@@ -1,0 +1,85 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"math/rand"
+
+	"github.com/miekg/dns"
+)
+
+type dnsHandler struct {
+	IPv4Proxies []string
+	IPv6Proxies []string
+}
+
+func (h *dnsHandler) getProxy(domain string, qtype uint16) (string, error) {
+	var proxies []string
+	if qtype == dns.TypeA {
+		proxies = h.IPv4Proxies
+	} else if qtype == dns.TypeAAAA {
+		proxies = h.IPv6Proxies
+	} else {
+		return "", fmt.Errorf("Unknown question type: %d", qtype)
+	}
+	if len(proxies) == 0 {
+		return "", fmt.Errorf("No proxies for question of type %d", qtype)
+	}
+	i := rand.Intn(len(proxies))
+	return proxies[i], nil
+}
+
+func (h *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
+	log.Printf("question: %s", r.Question)
+	if r.Opcode == dns.OpcodeQuery {
+		m := new(dns.Msg)
+		m.SetReply(r)
+		for _, q := range m.Question {
+			proxy, err := h.getProxy(q.Name, q.Qtype)
+			if err == nil {
+				recordString := fmt.Sprintf(
+					"%s IN %s %s",
+					q.Name,
+					dns.TypeToString[q.Qtype],
+					proxy,
+				)
+				record, err := dns.NewRR(recordString)
+				if err == nil {
+					m.Answer = append(m.Answer, record)
+				} else {
+					log.Printf(
+						"Unable to parse answer record %s: %s",
+						recordString,
+						err,
+					)
+				}
+			} else {
+				log.Printf("Unable to get proxy: %s", err)
+			}
+		}
+		w.WriteMsg(m)
+	} else {
+		log.Printf("Opcode %d ignored", r.Opcode)
+	}
+}
+
+func main() {
+	server := &dns.Server{
+		Addr: ":4253",
+		Net:  "udp",
+		Handler: &dnsHandler{
+			IPv4Proxies: []string{
+				"127.0.0.1",
+				"127.0.0.2",
+			},
+			IPv6Proxies: []string{
+				"::1",
+			},
+		},
+	}
+	err := server.ListenAndServe()
+	defer server.Shutdown()
+	if err != nil {
+		log.Fatalf("Failed to setup the udp server: %s", err)
+	}
+}
