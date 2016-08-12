@@ -78,7 +78,7 @@ func (c *Checker) CheckEntryProxy(address string) error {
 	}
 	body, err := getResponse(rule, client)
 	if err != nil {
-		return fmt.Errorf("Unable to get download: %s", err)
+		return fmt.Errorf("Unable to download: %s", err)
 	}
 	if err := checkResponse(rule, body); err != nil {
 		return fmt.Errorf("Check failed: %s", err)
