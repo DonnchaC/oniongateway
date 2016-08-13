@@ -41,17 +41,17 @@ func (c *Checker) chooseRule() (Rule, error) {
 	return c.Rules[ruleIndex], nil
 }
 
-func getResponse(url string, client http.Client) (string, error) {
+func getResponse(url string, client http.Client) (string, *http.Response, error) {
 	response, err := client.Get(url)
 	if err != nil {
-		return "", err
+		return "", response, err
 	}
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return "", err
+		return "", response, err
 	}
-	return string(body), nil
+	return string(body), response, nil
 }
 
 func checkResponse(rule Rule, body string) error {
@@ -76,7 +76,7 @@ func (c *Checker) CheckEntryProxy(address string) error {
 	if err != nil {
 		return fmt.Errorf("Unable to choose rule: %s", err)
 	}
-	body, err := getResponse(rule.URL, client)
+	body, _, err := getResponse(rule.URL, client)
 	if err != nil {
 		return fmt.Errorf("Unable to download: %s", err)
 	}
