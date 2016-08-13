@@ -7,7 +7,21 @@ import (
 )
 
 var (
-	entryProxy = flag.String("entry-proxy", ":443", "Entry proxy to test")
+	host = flag.String(
+		"host",
+		"127.0.0.1",
+		"Host of entry proxy to test",
+	)
+	proxyPort = flag.Int(
+		"proxy-port",
+		443,
+		"HTTPS port of entry proxy",
+	)
+	redirectPort = flag.Int(
+		"redirect-port",
+		80,
+		"HTTP port redirecting to entry proxy",
+	)
 )
 
 func main() {
@@ -17,8 +31,11 @@ func main() {
 		Rules: []Rule{
 			{"https://www.pasta.cf/mind-take-boyfriend/raw", "entry_proxy"},
 		},
+		RedirectRules: []string{
+			"http://example.com/foo",
+		},
 	}
-	err := checker.CheckEntryProxy(*entryProxy)
+	err := checker.CheckHost(*host, *proxyPort, *redirectPort)
 	if err == nil {
 		fmt.Printf("OK\n")
 	} else {

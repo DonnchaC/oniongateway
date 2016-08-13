@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/DonnchaC/oniongateway/util"
@@ -19,8 +20,9 @@ type Rule struct {
 
 // Checker for entry_proxy
 type Checker struct {
-	Rules []Rule
-	Dial  func(network, addr string) (net.Conn, error)
+	Rules         []Rule
+	RedirectRules []string
+	Dial          func(network, addr string) (net.Conn, error)
 }
 
 func (c *Checker) makeHTTPClient(address string) (http.Client, error) {
@@ -47,6 +49,15 @@ func (c *Checker) chooseRule() (Rule, error) {
 	return c.Rules[ruleIndex], nil
 }
 
+func (c *Checker) chooseRedirectURL() (*url.URL, error) {
+	if len(c.RedirectRules) == 0 {
+		return nil, fmt.Errorf("Set of redirect URLs to check is empty")
+	}
+	ruleIndex := rand.Intn(len(c.RedirectRules))
+	rawurl := c.RedirectRules[ruleIndex]
+	return url.Parse(rawurl)
+}
+
 func getResponse(theURL string, client http.Client) (string, *http.Response, error) {
 	response, err := client.Get(theURL)
 	if err != nil {
@@ -61,6 +72,21 @@ func getResponse(theURL string, client http.Client) (string, *http.Response, err
 		return "", response, err
 	}
 	return string(body), response, nil
+}
+
+func getLocation(url string, client http.Client) (*url.URL, error) {
+	_, response, err := getResponse(url, client)
+	if err != nil {
+		return nil, err
+	}
+	if response.StatusCode != http.StatusMovedPermanently {
+		return nil, fmt.Errorf(
+			"Wrong HTTP status returned: %d instead of %d",
+			response.StatusCode,
+			http.StatusMovedPermanently,
+		)
+	}
+	return response.Location()
 }
 
 func checkResponse(rule Rule, body string) error {
@@ -91,6 +117,60 @@ func (c *Checker) CheckEntryProxy(address string) error {
 	}
 	if err := checkResponse(rule, body); err != nil {
 		return fmt.Errorf("Check failed: %s", err)
+	}
+	return nil
+}
+
+// CheckRedirect checks if redirect works
+func (c *Checker) CheckRedirect(redirect, proxy string) error {
+	client, err := c.makeHTTPClient(redirect)
+	if err != nil {
+		return fmt.Errorf("Unable to create HTTP client: %s", err)
+	}
+	testingURL, err := c.chooseRedirectURL()
+	if err != nil {
+		return err
+	}
+	expectedHost := testingURL.Host
+	_, proxyPort, err := net.SplitHostPort(proxy)
+	if err != nil {
+		return fmt.Errorf("Failed to get proxy port from %q: %s", proxy, err)
+	}
+	if proxyPort != "443" {
+		expectedHost += ":" + proxyPort
+	}
+	url, err := getLocation(testingURL.String(), client)
+	if err != nil {
+		return fmt.Errorf("Unable to download: %s", err)
+	}
+	if url.Scheme != "https" {
+		return fmt.Errorf("redirects to non-https URL %q", url.String())
+	}
+	if url.Host != expectedHost {
+		return fmt.Errorf("redirect host is %q, expected %q", url.Host, expectedHost)
+	}
+	if url.Path != testingURL.Path {
+		return fmt.Errorf("redirect path is %q, expected %q", url.Path, testingURL.Path)
+	}
+	return nil
+}
+
+// CheckHost checks both redirect and proxy
+func (c *Checker) CheckHost(host string, proxyPort, redirectPort int) error {
+	proxyLocation := net.JoinHostPort(host, fmt.Sprintf("%d", proxyPort))
+	redirectLocation := net.JoinHostPort(host, fmt.Sprintf("%d", redirectPort))
+	err := c.CheckEntryProxy(proxyLocation)
+	if err != nil {
+		return fmt.Errorf("Unable to access onion via entry proxy: %s", err)
+	}
+	err = c.CheckRedirect(redirectLocation, proxyLocation)
+	if err != nil {
+		return fmt.Errorf(
+			"http://%s does not redirect to https://%s: %s\n",
+			redirectLocation,
+			proxyLocation,
+			err,
+		)
 	}
 	return nil
 }

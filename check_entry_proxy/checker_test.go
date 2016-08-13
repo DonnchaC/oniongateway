@@ -120,3 +120,151 @@ func TestCheckEntryProxyEmptyRules(t *testing.T) {
 		t.Fatal("checker did not fail with empty list of rules")
 	}
 }
+
+func makeRedirectingHTTPServer(code, port int, overrideHost string) *httptest.Server {
+	return httptest.NewServer(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				newURL := *r.URL
+				newURL.Scheme = "https"
+				host, _, err := net.SplitHostPort(r.Host)
+				if err != nil {
+					host = r.Host
+				}
+				if port != 443 {
+					portStr := fmt.Sprintf("%d", port)
+					host = net.JoinHostPort(host, portStr)
+				}
+				if overrideHost != "" {
+					host = overrideHost
+				}
+				newURL.Host = host
+				http.Redirect(w, r, newURL.String(), code)
+			},
+		),
+	)
+}
+
+func getHostPort(location string) (host string, port int) {
+	host, portStr, err := net.SplitHostPort(location)
+	if err != nil {
+		panic(fmt.Sprintf(
+			"Failed to parse %s to host:port: %s",
+			location,
+			err,
+		))
+	}
+	fmt.Sscanf(portStr, "%d", &port)
+	return
+}
+
+func TestCheckRedirect(t *testing.T) {
+	server := makeRedirectingHTTPServer(http.StatusMovedPermanently, 443, "")
+	checker := &Checker{
+		RedirectRules: []string{
+			"http://example.com/foo",
+		},
+	}
+	redirectLocation := server.Listener.Addr().String()
+	host, _ := getHostPort(redirectLocation)
+	proxyLocation := net.JoinHostPort(host, "443")
+	err := checker.CheckRedirect(redirectLocation, proxyLocation)
+	if err != nil {
+		t.Fatalf("Always passing test failed: %s", err)
+	}
+}
+
+func TestCheckRedirectNonStandardPort(t *testing.T) {
+	server := makeRedirectingHTTPServer(http.StatusMovedPermanently, 1443, "")
+	checker := &Checker{
+		RedirectRules: []string{
+			"http://example.com/foo",
+		},
+	}
+	redirectLocation := server.Listener.Addr().String()
+	host, _ := getHostPort(redirectLocation)
+	proxyLocation := net.JoinHostPort(host, "1443")
+	err := checker.CheckRedirect(redirectLocation, proxyLocation)
+	if err != nil {
+		t.Fatalf("Always passing test failed: %s", err)
+	}
+}
+
+func TestCheckRedirectOtherHost(t *testing.T) {
+	server := makeRedirectingHTTPServer(http.StatusMovedPermanently, 443, "hacker.host")
+	checker := &Checker{
+		RedirectRules: []string{
+			"http://example.com/foo",
+		},
+	}
+	redirectLocation := server.Listener.Addr().String()
+	host, _ := getHostPort(redirectLocation)
+	proxyLocation := net.JoinHostPort(host, "443")
+	err := checker.CheckRedirect(redirectLocation, proxyLocation)
+	if err == nil {
+		t.Fatalf("Expected to fail, but not failed")
+	}
+}
+
+func TestCheckRedirectOtherPort(t *testing.T) {
+	server := makeRedirectingHTTPServer(http.StatusMovedPermanently, 443, "")
+	checker := &Checker{
+		RedirectRules: []string{
+			"http://example.com/foo",
+		},
+	}
+	redirectLocation := server.Listener.Addr().String()
+	host, _ := getHostPort(redirectLocation)
+	proxyLocation := net.JoinHostPort(host, "1443")
+	err := checker.CheckRedirect(redirectLocation, proxyLocation)
+	if err == nil {
+		t.Fatalf("Expected to fail, but not failed")
+	}
+}
+
+func TestCheckRedirectOtherHTTPStatus(t *testing.T) {
+	server := makeRedirectingHTTPServer(http.StatusFound, 443, "")
+	checker := &Checker{
+		RedirectRules: []string{
+			"http://example.com/foo",
+		},
+	}
+	redirectLocation := server.Listener.Addr().String()
+	host, _ := getHostPort(redirectLocation)
+	proxyLocation := net.JoinHostPort(host, "443")
+	err := checker.CheckRedirect(redirectLocation, proxyLocation)
+	if err == nil {
+		t.Fatalf("Expected to fail, but not failed")
+	}
+}
+
+func TestCheckRedirectEmptyRules(t *testing.T) {
+	server := makeRedirectingHTTPServer(http.StatusMovedPermanently, 443, "")
+	checker := &Checker{}
+	redirectLocation := server.Listener.Addr().String()
+	host, _ := getHostPort(redirectLocation)
+	proxyLocation := net.JoinHostPort(host, "443")
+	err := checker.CheckRedirect(redirectLocation, proxyLocation)
+	if err == nil {
+		t.Fatalf("Expected to fail, but not failed")
+	}
+}
+
+func TestCheckHost(t *testing.T) {
+	checker, server, _ := makeRealChecker("test passed", "test passed")
+	checker.RedirectRules = []string{
+		"http://example.com/foo",
+	}
+	defer server.Close()
+	proxyHost, proxyPort := getHostPort(server.Listener.Addr().String())
+	server = makeRedirectingHTTPServer(http.StatusMovedPermanently, proxyPort, "")
+	defer server.Close()
+	redirectHost, redirectPort := getHostPort(server.Listener.Addr().String())
+	if redirectHost != proxyHost {
+		t.Fatalf("host(proxy)=%q, host(redirect)=%q", proxyHost, redirectHost)
+	}
+	err := checker.CheckHost(redirectHost, proxyPort, redirectPort)
+	if err != nil {
+		t.Fatalf("Always passing test failed: %s", err)
+	}
+}
