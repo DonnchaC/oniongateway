@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/DonnchaC/oniongateway/util"
 )
 
 // Rule for checker: URL and text expected to be found in response
@@ -30,7 +32,11 @@ func (c *Checker) makeHTTPClient(address string) (http.Client, error) {
 			return net.Dial(network, address)
 		},
 	}
-	return http.Client{Transport: transport}, nil
+	client := http.Client{
+		Transport: transport,
+		CheckRedirect: util.IgnoreRedirect,
+	}
+	return client, nil
 }
 
 func (c *Checker) chooseRule() (Rule, error) {
@@ -41,9 +47,12 @@ func (c *Checker) chooseRule() (Rule, error) {
 	return c.Rules[ruleIndex], nil
 }
 
-func getResponse(url string, client http.Client) (string, *http.Response, error) {
-	response, err := client.Get(url)
+func getResponse(theURL string, client http.Client) (string, *http.Response, error) {
+	response, err := client.Get(theURL)
 	if err != nil {
+		if util.IsRedirectError(err) {
+			return "", response, nil
+		}
 		return "", response, err
 	}
 	defer response.Body.Close()
