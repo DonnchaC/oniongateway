@@ -21,24 +21,31 @@ func makeHTTPServer(observedText string) *httptest.Server {
 	)
 }
 
-func makeMockChecker(expectedText, observedText, url string) *Checker {
-	ts := makeHTTPServer(observedText)
-	return &Checker{
+func makeMockChecker(
+	expectedText, observedText, url string,
+) (
+	checker *Checker,
+	server *httptest.Server,
+) {
+	server = makeHTTPServer(observedText)
+	checker = &Checker{
 		Rules: []Rule{
 			{url, expectedText},
 		},
 		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial(network, ts.Listener.Addr().String())
+			return net.Dial(network, server.Listener.Addr().String())
 		},
 	}
+	return
 }
 
 func TestCheckEntryProxy(t *testing.T) {
-	checker := makeMockChecker(
+	checker, server := makeMockChecker(
 		"test passed",
 		"test passed",
 		"http://example.com/",
 	)
+	defer server.Close()
 	err := checker.CheckEntryProxy(anyProxy)
 	if err != nil {
 		t.Fatalf("Always passing test failed: %s", err)
@@ -46,11 +53,12 @@ func TestCheckEntryProxy(t *testing.T) {
 }
 
 func TestCheckEntryProxyFailNotContains(t *testing.T) {
-	checker := makeMockChecker(
+	checker, server := makeMockChecker(
 		"expected",
 		"observed",
 		"http://example.com/",
 	)
+	defer server.Close()
 	err := checker.CheckEntryProxy(anyProxy)
 	if err == nil {
 		t.Fatalf("checker did not fail with bad entry_proxy: %s", err)
@@ -58,11 +66,12 @@ func TestCheckEntryProxyFailNotContains(t *testing.T) {
 }
 
 func TestCheckEntryProxyFailDownloading(t *testing.T) {
-	checker := makeMockChecker(
+	checker, server := makeMockChecker(
 		"expected",
 		"observed",
 		"https://example.com/",
 	)
+	defer server.Close()
 	err := checker.CheckEntryProxy(anyProxy)
 	if err == nil {
 		t.Fatalf("checker did not fail with bad entry_proxy: %s", err)
@@ -73,20 +82,22 @@ func makeRealChecker(
 	expectedText, observedText string,
 ) (
 	checker *Checker,
+	server *httptest.Server,
 	proxy string,
 ) {
-	ts := makeHTTPServer(observedText)
+	server = makeHTTPServer(observedText)
 	checker = &Checker{
 		Rules: []Rule{
 			{"http://example.com/", expectedText},
 		},
 	}
-	proxy = ts.Listener.Addr().String()
+	proxy = server.Listener.Addr().String()
 	return
 }
 
 func TestCheckEntryProxyReal(t *testing.T) {
-	checker, proxy := makeRealChecker("test passed", "test passed")
+	checker, server, proxy := makeRealChecker("test passed", "test passed")
+	defer server.Close()
 	err := checker.CheckEntryProxy(proxy)
 	if err != nil {
 		t.Fatalf("Always passing test failed: %s", err)
@@ -94,7 +105,8 @@ func TestCheckEntryProxyReal(t *testing.T) {
 }
 
 func TestCheckEntryProxyRealFail(t *testing.T) {
-	checker, proxy := makeRealChecker("expected", "observed")
+	checker, server, proxy := makeRealChecker("expected", "observed")
+	defer server.Close()
 	err := checker.CheckEntryProxy(proxy)
 	if err == nil {
 		t.Fatalf("checker did not fail with bad entry_proxy: %s", err)
