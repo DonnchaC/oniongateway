@@ -1,13 +1,23 @@
 package main
 
 import (
+	"crypto/rand"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
 
 	"gopkg.in/yaml.v2"
 )
+
+func cryptoRandInt(upperBound int) int {
+	value, err := rand.Int(rand.Reader, big.NewInt(int64(upperBound)))
+	if err != nil {
+		panic(err)
+	}
+	return int(value.Int64())
+}
 
 var (
 	host = flag.String(
@@ -57,6 +67,7 @@ func main() {
 			},
 		}
 	}
+	checker.RandIntn = cryptoRandInt
 	err := checker.CheckHost(*host, *proxyPort, *redirectPort)
 	if err == nil {
 		fmt.Printf("OK\n")

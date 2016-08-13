@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -35,6 +36,7 @@ func makeMockChecker(
 		Dial: func(network, addr string) (net.Conn, error) {
 			return net.Dial(network, server.Listener.Addr().String())
 		},
+		RandIntn: rand.Intn,
 	}
 	return
 }
@@ -90,6 +92,7 @@ func makeRealChecker(
 		Rules: []Rule{
 			{"http://example.com/", expectedText},
 		},
+		RandIntn: rand.Intn,
 	}
 	proxy = server.Listener.Addr().String()
 	return
@@ -164,6 +167,7 @@ func TestCheckRedirect(t *testing.T) {
 		RedirectRules: []string{
 			"http://example.com/foo",
 		},
+		RandIntn: rand.Intn,
 	}
 	redirectLocation := server.Listener.Addr().String()
 	host, _ := getHostPort(redirectLocation)
@@ -180,6 +184,7 @@ func TestCheckRedirectNonStandardPort(t *testing.T) {
 		RedirectRules: []string{
 			"http://example.com/foo",
 		},
+		RandIntn: rand.Intn,
 	}
 	redirectLocation := server.Listener.Addr().String()
 	host, _ := getHostPort(redirectLocation)
@@ -196,6 +201,7 @@ func TestCheckRedirectOtherHost(t *testing.T) {
 		RedirectRules: []string{
 			"http://example.com/foo",
 		},
+		RandIntn: rand.Intn,
 	}
 	redirectLocation := server.Listener.Addr().String()
 	host, _ := getHostPort(redirectLocation)
@@ -212,6 +218,7 @@ func TestCheckRedirectOtherPort(t *testing.T) {
 		RedirectRules: []string{
 			"http://example.com/foo",
 		},
+		RandIntn: rand.Intn,
 	}
 	redirectLocation := server.Listener.Addr().String()
 	host, _ := getHostPort(redirectLocation)
@@ -228,6 +235,7 @@ func TestCheckRedirectOtherHTTPStatus(t *testing.T) {
 		RedirectRules: []string{
 			"http://example.com/foo",
 		},
+		RandIntn: rand.Intn,
 	}
 	redirectLocation := server.Listener.Addr().String()
 	host, _ := getHostPort(redirectLocation)

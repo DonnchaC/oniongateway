@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -23,6 +22,7 @@ type Checker struct {
 	Rules         []Rule
 	RedirectRules []string
 	Dial          func(network, addr string) (net.Conn, error)
+	RandIntn      func(n int) int
 }
 
 func (c *Checker) makeHTTPClient(address string) (http.Client, error) {
@@ -45,7 +45,7 @@ func (c *Checker) chooseRule() (Rule, error) {
 	if len(c.Rules) == 0 {
 		return Rule{}, fmt.Errorf("Set of rules to check is empty")
 	}
-	ruleIndex := rand.Intn(len(c.Rules))
+	ruleIndex := c.RandIntn(len(c.Rules))
 	return c.Rules[ruleIndex], nil
 }
 
@@ -53,7 +53,7 @@ func (c *Checker) chooseRedirectURL() (*url.URL, error) {
 	if len(c.RedirectRules) == 0 {
 		return nil, fmt.Errorf("Set of redirect URLs to check is empty")
 	}
-	ruleIndex := rand.Intn(len(c.RedirectRules))
+	ruleIndex := c.RandIntn(len(c.RedirectRules))
 	rawurl := c.RedirectRules[ruleIndex]
 	return url.Parse(rawurl)
 }
