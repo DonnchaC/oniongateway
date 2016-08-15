@@ -22,7 +22,9 @@ script:
       -covermode=count
       -coverprofile=coverage.out
   - >
+      while !
       $GOPATH/bin/goveralls
       -coverprofile=coverage.out
       -service=travis-ci
       -repotoken=$COVERALLS_TOKEN
+      ; do sleep $(shuf -i 1-10 -n 1); done
