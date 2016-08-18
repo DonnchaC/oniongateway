@@ -11,19 +11,51 @@ See also:
 
 import (
 	"flag"
+	"fmt"
+	"os"
 )
 
 func main() {
 	var (
-		proxyNet  = flag.String("proxyNet", "tcp", "Proxy network type")
-		proxyAddr = flag.String("proxyAddr", "127.0.0.1:9050", "Proxy address")
-		listenOn  = flag.String("listen-on", ":443", "Where to listen")
-		onionPort = flag.Int("onion-port", 443, "Port on onion site to use")
+		proxyNet = flag.String(
+			"proxyNet",
+			"tcp",
+			"Proxy network type",
+		)
+		proxyAddr = flag.String(
+			"proxyAddr",
+			"127.0.0.1:9050",
+			"Proxy address",
+		)
+		entryProxy = flag.String(
+			"entry-proxy",
+			":443",
+			"host:port of entry proxy",
+		)
+		httpRedirect = flag.String(
+			"http-redirect",
+			":80",
+			"host:port of redirecting HTTP server ('' to disable)",
+		)
+		onionPort = flag.Int(
+			"onion-port",
+			443,
+			"Port on onion site to use",
+		)
 	)
 
 	flag.Parse()
 
+	if *httpRedirect != "" {
+		redirectingServer, err := NewRedirect(*httpRedirect, *entryProxy)
+		if err != nil {
+			fmt.Printf("Unable to create redirecting HTTP server: %s\n", err)
+			os.Exit(1)
+		}
+		go redirectingServer.ListenAndServe()
+	}
+
 	proxy := NewTLSProxy(*onionPort, *proxyNet, *proxyAddr)
-	proxy.Listen("tcp", *listenOn)
+	proxy.Listen("tcp", *entryProxy)
 	proxy.Start()
 }
