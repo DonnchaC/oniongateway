@@ -13,8 +13,9 @@ type Resolver interface {
 }
 
 type fixedResolver struct {
-	IPv4Proxies []string
-	IPv6Proxies []string
+	IPv4Proxies  []string
+	IPv6Proxies  []string
+	Domain2Onion map[string]string
 }
 
 func (r *fixedResolver) Resolve(
@@ -29,6 +30,13 @@ func (r *fixedResolver) Resolve(
 		proxies = r.IPv4Proxies
 	} else if qtype == dns.TypeAAAA {
 		proxies = r.IPv6Proxies
+	} else if qtype == dns.TypeTXT {
+		onion, ok := r.Domain2Onion[domain]
+		if !ok {
+			return "", fmt.Errorf("TXT request of unknown domain: %q", domain)
+		}
+		txt := fmt.Sprintf("onion=%s", onion)
+		return txt, nil
 	} else {
 		return "", fmt.Errorf("Unknown question type: %d", qtype)
 	}
@@ -89,6 +97,9 @@ func main() {
 				},
 				IPv6Proxies: []string{
 					"::1",
+				},
+				Domain2Onion: map[string]string{
+					"pasta.cf.": "pastagdsp33j7aoq.onion",
 				},
 			},
 		},
