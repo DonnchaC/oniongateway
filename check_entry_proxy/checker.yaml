@@ -1,0 +1,10 @@
+rules:
+    - url: https://www.pasta.cf/mind-take-boyfriend/raw
+      expectedtext: entry_proxy
+
+    - url: https://www.pasta.cf/hey-aim-slap
+      expectedtext: another test
+
+redirectrules:
+    - http://example.com/foo
+    - http://site.com/
