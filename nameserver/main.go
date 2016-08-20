@@ -3,48 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
 
 	"github.com/miekg/dns"
 )
 
 type Resolver interface {
 	Resolve(domain string, qtype, qclass uint16) (string, error)
-}
-
-type fixedResolver struct {
-	IPv4Proxies  []string
-	IPv6Proxies  []string
-	Domain2Onion map[string]string
-}
-
-func (r *fixedResolver) Resolve(
-	domain string,
-	qtype, qclass uint16,
-) (
-	string,
-	error,
-) {
-	var proxies []string
-	if qtype == dns.TypeA {
-		proxies = r.IPv4Proxies
-	} else if qtype == dns.TypeAAAA {
-		proxies = r.IPv6Proxies
-	} else if qtype == dns.TypeTXT {
-		onion, ok := r.Domain2Onion[domain]
-		if !ok {
-			return "", fmt.Errorf("TXT request of unknown domain: %q", domain)
-		}
-		txt := fmt.Sprintf("onion=%s", onion)
-		return txt, nil
-	} else {
-		return "", fmt.Errorf("Unknown question type: %d", qtype)
-	}
-	if len(proxies) == 0 {
-		return "", fmt.Errorf("No proxies for question of type %d", qtype)
-	}
-	i := rand.Intn(len(proxies))
-	return proxies[i], nil
 }
 
 type dnsHandler struct {
@@ -90,7 +54,7 @@ func main() {
 		Addr: ":4253",
 		Net:  "udp",
 		Handler: &dnsHandler{
-			resolver: &fixedResolver{
+			resolver: &FixedResolver{
 				IPv4Proxies: []string{
 					"127.0.0.1",
 					"127.0.0.2",
