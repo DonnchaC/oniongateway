@@ -8,17 +8,27 @@ import (
 	"github.com/miekg/dns"
 )
 
-type dnsHandler struct {
+type Resolver interface {
+	Resolve(domain string, qtype, qclass uint16) (string, error)
+}
+
+type fixedResolver struct {
 	IPv4Proxies []string
 	IPv6Proxies []string
 }
 
-func (h *dnsHandler) getProxy(domain string, qtype uint16) (string, error) {
+func (r *fixedResolver) Resolve(
+	domain string,
+	qtype, qclass uint16,
+) (
+	string,
+	error,
+) {
 	var proxies []string
 	if qtype == dns.TypeA {
-		proxies = h.IPv4Proxies
+		proxies = r.IPv4Proxies
 	} else if qtype == dns.TypeAAAA {
-		proxies = h.IPv6Proxies
+		proxies = r.IPv6Proxies
 	} else {
 		return "", fmt.Errorf("Unknown question type: %d", qtype)
 	}
@@ -29,13 +39,17 @@ func (h *dnsHandler) getProxy(domain string, qtype uint16) (string, error) {
 	return proxies[i], nil
 }
 
+type dnsHandler struct {
+	resolver Resolver
+}
+
 func (h *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	log.Printf("question: %s", r.Question)
 	if r.Opcode == dns.OpcodeQuery {
 		m := new(dns.Msg)
 		m.SetReply(r)
 		for _, q := range m.Question {
-			proxy, err := h.getProxy(q.Name, q.Qtype)
+			proxy, err := h.resolver.Resolve(q.Name, q.Qtype, q.Qclass)
 			if err == nil {
 				recordString := fmt.Sprintf(
 					"%s IN %s %s",
@@ -68,12 +82,14 @@ func main() {
 		Addr: ":4253",
 		Net:  "udp",
 		Handler: &dnsHandler{
-			IPv4Proxies: []string{
-				"127.0.0.1",
-				"127.0.0.2",
-			},
-			IPv6Proxies: []string{
-				"::1",
+			resolver: &fixedResolver{
+				IPv4Proxies: []string{
+					"127.0.0.1",
+					"127.0.0.2",
+				},
+				IPv6Proxies: []string{
+					"::1",
+				},
 			},
 		},
 	}
