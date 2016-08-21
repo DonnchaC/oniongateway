@@ -14,7 +14,7 @@ or documentation.
 Installation and Usage
 ----------------------
 
-OnionGateway requires a working Go build environment. Once you have that configured you can build the `entry_proxy` and it's dependencies with the `go get` command. The binary will be built inside you `$GOPATH/bin` directory. You may need to add this directory your shell `$PATH` environment variable.
+OnionGateway requires a working Go build environment. Once you have that configured you can build the `entry_proxy` and it's dependencies with the `go get` command. The binary will be built inside your `$GOPATH/bin` directory. You may need to add this directory to your shell `$PATH` environment variable.
 
 ```bash
 go get github.com/DonnchaC/oniongateway
