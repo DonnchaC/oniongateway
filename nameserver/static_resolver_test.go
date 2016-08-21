@@ -7,8 +7,8 @@ import (
 	"github.com/miekg/dns"
 )
 
-func TestFixedResolver(t *testing.T) {
-	resolver := &FixedResolver{
+func TestStaticResolver(t *testing.T) {
+	resolver := &StaticResolver{
 		IPv4Proxies: []string{
 			"127.0.0.1",
 		},
@@ -46,8 +46,8 @@ func TestFixedResolver(t *testing.T) {
 	}
 }
 
-func TestFixedResolverAbsent(t *testing.T) {
-	resolver := &FixedResolver{}
+func TestStaticResolverAbsent(t *testing.T) {
+	resolver := &StaticResolver{}
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err == nil {
@@ -65,8 +65,8 @@ func TestFixedResolverAbsent(t *testing.T) {
 	}
 }
 
-func TestFixedResolverMulti(t *testing.T) {
-	resolver := &FixedResolver{
+func TestStaticResolverMulti(t *testing.T) {
+	resolver := &StaticResolver{
 		IPv4Proxies: []string{
 			"127.0.0.1",
 			"127.0.0.2",

@@ -7,8 +7,8 @@ import (
 	"github.com/miekg/dns"
 )
 
-// FixedResolver resolves DNS requests from static in-memory config
-type FixedResolver struct {
+// StaticResolver resolves DNS requests from static in-memory config
+type StaticResolver struct {
 	IPv4Proxies  []string
 	IPv6Proxies  []string
 	Domain2Onion map[string]string
@@ -16,7 +16,7 @@ type FixedResolver struct {
 }
 
 // Resolve fetches result value for DNS request from memory
-func (r *FixedResolver) Resolve(
+func (r *StaticResolver) Resolve(
 	domain string,
 	qtype, qclass uint16,
 ) (

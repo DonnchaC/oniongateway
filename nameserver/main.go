@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	fixedConfig = flag.String(
-		"fixed-config",
+	staticConfig = flag.String(
+		"static-config",
 		"",
 		"config file with rules in YAML format",
 	)
@@ -51,20 +51,20 @@ func main() {
 		log.Fatalf("-answer-count must be >= 1")
 	}
 	var handler dnsHandler
-	if *fixedConfig != "" && *etcdEndpoints != "" {
-		log.Fatalf("Provide one of -fixed-config and -etcd-endpoints")
-	} else if *fixedConfig != "" {
-		configData, err := ioutil.ReadFile(*fixedConfig)
+	if *staticConfig != "" && *etcdEndpoints != "" {
+		log.Fatalf("Provide one of -static-config and -etcd-endpoints")
+	} else if *staticConfig != "" {
+		configData, err := ioutil.ReadFile(*staticConfig)
 		if err != nil {
-			log.Fatalf("Error reading config %s: %s\n", *fixedConfig, err)
+			log.Fatalf("Error reading config %s: %s\n", *staticConfig, err)
 		}
-		var fixedResolver FixedResolver
-		err = yaml.Unmarshal(configData, &fixedResolver)
+		var staticResolver StaticResolver
+		err = yaml.Unmarshal(configData, &staticResolver)
 		if err != nil {
-			log.Fatalf("Error parsing config %s: %s\n", *fixedConfig, err)
+			log.Fatalf("Error parsing config %s: %s\n", *staticConfig, err)
 		}
-		fixedResolver.AnswerCount = *answerCount
-		handler.resolver = &fixedResolver
+		staticResolver.AnswerCount = *answerCount
+		handler.resolver = &staticResolver
 	} else if *etcdEndpoints != "" {
 		endpoints := strings.Split(*etcdEndpoints, ",")
 		client, err := clientv3.New(clientv3.Config{
@@ -80,7 +80,7 @@ func main() {
 			AnswerCount: *answerCount,
 		}
 	} else {
-		log.Fatalf("Provide one of -fixed-config and -etcd-endpoints")
+		log.Fatalf("Provide one of -static-config and -etcd-endpoints")
 	}
 	server := &dns.Server{
 		Addr:    *listenAddr,
