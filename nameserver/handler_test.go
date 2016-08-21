@@ -12,7 +12,7 @@ type mockResolver struct {
 }
 
 func (m *mockResolver) Resolve(_ string, _, _ uint16) ([]string, error) {
-	return []string{"1.1.1.1"}, nil
+	return []string{"1.1.1.1", "2.2.2.2"}, nil
 }
 
 func TestHandler(t *testing.T) {
@@ -37,12 +37,16 @@ func TestHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get DNS response from %s: %s", dnsAddr, err)
 	}
-	if firstAnswer, ok := in.Answer[0].(*dns.A); ok {
-		ipAddressStr := firstAnswer.A.String()
-		if ipAddressStr != "1.1.1.1" {
-			t.Fatalf("DNS answered %q, exp. %q", ipAddressStr, "1.1.1.1")
+	checkAnswer := func(i int, expected string) {
+		if answer, ok := in.Answer[i].(*dns.A); ok {
+			ipAddressStr := answer.A.String()
+			if ipAddressStr != expected {
+				t.Fatalf("DNS answered %q, exp. %q", ipAddressStr, expected)
+			}
+		} else {
+			t.Fatalf("DNS response can't be converted to type A")
 		}
-	} else {
-		t.Fatalf("DNS response can't be converted to type A")
 	}
+	checkAnswer(0, "1.1.1.1")
+	checkAnswer(1, "2.2.2.2")
 }

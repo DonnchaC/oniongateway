@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"sort"
 	"testing"
 	"time"
 
@@ -76,21 +77,15 @@ func makeEtcdServer() (
 	return
 }
 
-func populateDatabase(client *clientv3.Client) error {
+func populateDatabase(client *clientv3.Client, kvs map[string]string) error {
 	kv := clientv3.NewKV(client)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	_, err := kv.Put(ctx, "/ipv4/127.0.0.1", "not used")
-	if err != nil {
-		return fmt.Errorf("Failed to put key /ipv4/127.0.0.1: %s", err)
-	}
-	_, err = kv.Put(ctx, "/ipv6/::1", "not used")
-	if err != nil {
-		return fmt.Errorf("Failed to put key /ipv6/::1: %s", err)
-	}
-	_, err = kv.Put(ctx, "/domain2onion/pasta.cf.", "pastagdsp33j7aoq.onion")
-	if err != nil {
-		return fmt.Errorf("Failed to put key /domain2onion/pasta.cf.: %s", err)
+	for key, value := range kvs {
+		_, err := kv.Put(ctx, key, value)
+		if err != nil {
+			return fmt.Errorf("Failed to put (%q, %q): %s", key, value, err)
+		}
 	}
 	return nil
 }
@@ -101,12 +96,18 @@ func TestEtcdResolver(t *testing.T) {
 		t.Fatalf("Failed to create etcd server and client: %s", err)
 	}
 	defer closer()
-	if err = populateDatabase(client); err != nil {
+	data := map[string]string{
+		"/ipv4/127.0.0.1":         "value is not used",
+		"/ipv6/::1":               "value is not used",
+		"/domain2onion/pasta.cf.": "pastagdsp33j7aoq.onion",
+	}
+	if err = populateDatabase(client, data); err != nil {
 		t.Fatalf("Failed to populate etcd with example data: %s", err)
 	}
 	resolver := &EtcdResolver{
-		Client:  client,
-		Timeout: timeout,
+		Client:      client,
+		Timeout:     timeout,
+		AnswerCount: 1,
 	}
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
@@ -141,8 +142,9 @@ func TestEmptyResolverAbsent(t *testing.T) {
 	}
 	defer closer()
 	resolver := &EtcdResolver{
-		Client:  client,
-		Timeout: timeout,
+		Client:      client,
+		Timeout:     timeout,
+		AnswerCount: 1,
 	}
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
@@ -158,5 +160,34 @@ func TestEmptyResolverAbsent(t *testing.T) {
 	txts, err := resolver.Resolve("pasta.cf.", dns.TypeTXT, dns.ClassINET)
 	if err == nil {
 		t.Fatalf("TXT request expected to fail returned %s", txts)
+	}
+}
+
+func TestEtcdResolverMulti(t *testing.T) {
+	_, client, closer, err := makeEtcdServer()
+	if err != nil {
+		t.Fatalf("Failed to create etcd server and client: %s", err)
+	}
+	defer closer()
+	data := map[string]string{
+		"/ipv4/127.0.0.1": "value is not used",
+		"/ipv4/127.0.0.2": "value is not used",
+	}
+	if err = populateDatabase(client, data); err != nil {
+		t.Fatalf("Failed to populate etcd with example data: %s", err)
+	}
+	resolver := &EtcdResolver{
+		Client:      client,
+		Timeout:     timeout,
+		AnswerCount: 2,
+	}
+	// IPv4
+	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
+	if err != nil {
+		t.Fatalf("Failed to resolve %q to IPv4", "example.com.")
+	}
+	sort.Strings(ips)
+	if ips[0] != "127.0.0.1" || ips[1] != "127.0.0.2" {
+		t.Fatalf("Wrong IPv4 address was returned: %s", ips)
 	}
 }

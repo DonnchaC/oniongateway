@@ -2,19 +2,20 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"path"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/dgryski/go-randsample"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
 
 // EtcdResolver resolves DNS requests from etcd
 type EtcdResolver struct {
-	Client  *clientv3.Client
-	Timeout time.Duration
+	Client      *clientv3.Client
+	Timeout     time.Duration
+	AnswerCount int
 }
 
 // Resolve fetches result value for DNS request from etcd
@@ -44,10 +45,17 @@ func (r *EtcdResolver) Resolve(
 		if n == 0 {
 			return nil, fmt.Errorf("No proxies for question of type %d", qtype)
 		}
-		i := rand.Intn(n)
-		key := string(resp.Kvs[i].Key)
-		address := path.Base(key)
-		return []string{address}, nil
+		k := r.AnswerCount
+		if n < k {
+			k = n
+		}
+		var result []string
+		for _, i := range randsample.Sample(n, k) {
+			key := string(resp.Kvs[i].Key)
+			address := path.Base(key)
+			result = append(result, address)
+		}
+		return result, nil
 	} else if qtype == dns.TypeTXT {
 		key := fmt.Sprintf("/domain2onion/%s", domain)
 		resp, err := kv.Get(ctx, key)

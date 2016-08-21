@@ -38,10 +38,18 @@ var (
 		"udp",
 		"Network of DNS server to create",
 	)
+	answerCount = flag.Int(
+		"answer-count",
+		2,
+		"Number of addresses returned by DNS server",
+	)
 )
 
 func main() {
 	flag.Parse()
+	if *answerCount <= 0 {
+		log.Fatalf("-answer-count must be >= 1")
+	}
 	var handler dnsHandler
 	if *fixedConfig != "" && *etcdEndpoints != "" {
 		log.Fatalf("Provide one of -fixed-config and -etcd-endpoints")
@@ -55,6 +63,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error parsing config %s: %s\n", *fixedConfig, err)
 		}
+		fixedResolver.AnswerCount = *answerCount
 		handler.resolver = &fixedResolver
 	} else if *etcdEndpoints != "" {
 		endpoints := strings.Split(*etcdEndpoints, ",")
@@ -66,8 +75,9 @@ func main() {
 			log.Fatalf("Error creating etcd client: %s", err)
 		}
 		handler.resolver = &EtcdResolver{
-			Client:  client,
-			Timeout: *etcdTimeout,
+			Client:      client,
+			Timeout:     *etcdTimeout,
+			AnswerCount: *answerCount,
 		}
 	} else {
 		log.Fatalf("Provide one of -fixed-config and -etcd-endpoints")
