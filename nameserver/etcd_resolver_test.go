@@ -57,6 +57,7 @@ func makeEtcdServer() (
 		os.RemoveAll(tmpDir)
 		return
 	}
+	time.Sleep(time.Second) // https://github.com/coreos/etcd/issues/6029#issuecomment-234664336
 	// create client
 	client, err = clientv3.New(clientv3.Config{
 		Endpoints:   []string{fmt.Sprintf("127.0.0.1:%d", clientPort)},
