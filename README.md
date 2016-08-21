@@ -28,7 +28,7 @@ entry_proxy
 
 To improve performance, the server running the `entry_proxy` should have a Tor
 daemon which is running in `Tor2Web` mode. There are instructions for
-compiling Tor in this mode at https://github.com/globaleaks/Tor2web/wiki/Installation-Guide#build-tor-with-tor2web-mode-and-some-patches.
+compiling Tor in this mode on the [Tor2Web wiki][tor2web-doc].
 
 `entry_proxy` uses the DNS system to resolve domain names to hidden service
 addresses. You should install a local caching DNS server to avoid making a
@@ -113,3 +113,4 @@ access your site at `https://myblog.com`.
 [appveyor-badge]: https://ci.appveyor.com/api/projects/status/i98wvpauvnrbvemw
 [coveralls-page]: https://coveralls.io/github/DonnchaC/oniongateway
 [coveralls-badge]: https://coveralls.io/repos/github/DonnchaC/oniongateway/badge.png
+[tor2web-doc]: https://github.com/globaleaks/Tor2web/wiki/Installation-Guide#build-tor-with-tor2web-mode-and-some-patches
