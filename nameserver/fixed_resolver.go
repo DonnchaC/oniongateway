@@ -14,6 +14,7 @@ type FixedResolver struct {
 	Domain2Onion map[string]string
 }
 
+// Resolve fetches result value for DNS request from memory
 func (r *FixedResolver) Resolve(
 	domain string,
 	qtype, qclass uint16,

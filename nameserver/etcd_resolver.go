@@ -17,6 +17,7 @@ type EtcdResolver struct {
 	Timeout time.Duration
 }
 
+// Resolve fetches result value for DNS request from etcd
 func (r *EtcdResolver) Resolve(
 	domain string,
 	qtype, qclass uint16,

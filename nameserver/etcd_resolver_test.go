@@ -26,16 +26,16 @@ func makeEtcdServer() (
 	// choose ports and data directory
 	peerPort := freeport.GetPort()
 	clientPort := freeport.GetPort()
-	peerUrlStr := fmt.Sprintf("http://127.0.0.1:%d", peerPort)
-	peerUrl, err := url.Parse(peerUrlStr)
+	peerURLStr := fmt.Sprintf("http://127.0.0.1:%d", peerPort)
+	peerURL, err := url.Parse(peerURLStr)
 	if err != nil {
-		err = fmt.Errorf("Failed to parse peer URL %q: %s", peerUrlStr, err)
+		err = fmt.Errorf("Failed to parse peer URL %q: %s", peerURLStr, err)
 		return
 	}
-	clientUrlStr := fmt.Sprintf("http://127.0.0.1:%d", clientPort)
-	clientUrl, err := url.Parse(clientUrlStr)
+	clientURLStr := fmt.Sprintf("http://127.0.0.1:%d", clientPort)
+	clientURL, err := url.Parse(clientURLStr)
 	if err != nil {
-		err = fmt.Errorf("Failed to parse client URL %q: %s", clientUrlStr, err)
+		err = fmt.Errorf("Failed to parse client URL %q: %s", clientURLStr, err)
 		return
 	}
 	tmpDir, err := ioutil.TempDir("", "oniongateway-nameserver-etcd-test")
@@ -46,10 +46,10 @@ func makeEtcdServer() (
 	// create server
 	cfg := embed.NewConfig()
 	cfg.Dir = tmpDir
-	cfg.APUrls = []url.URL{*peerUrl}
-	cfg.LPUrls = []url.URL{*peerUrl}
-	cfg.ACUrls = []url.URL{*clientUrl}
-	cfg.LCUrls = []url.URL{*clientUrl}
+	cfg.APUrls = []url.URL{*peerURL}
+	cfg.LPUrls = []url.URL{*peerURL}
+	cfg.ACUrls = []url.URL{*clientURL}
+	cfg.LCUrls = []url.URL{*clientURL}
 	cfg.InitialCluster = cfg.InitialClusterFromName(cfg.Name)
 	server, err = embed.StartEtcd(cfg)
 	if err != nil {

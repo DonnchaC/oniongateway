@@ -13,6 +13,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Resolver fetches result value for DNS request
 type Resolver interface {
 	Resolve(domain string, qtype, qclass uint16) (string, error)
 }
