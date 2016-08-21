@@ -1,0 +1,8 @@
+ipv4proxies:
+    - 94.102.53.178
+
+ipv6proxies:
+    - 2002:5e66:35b2::1
+
+domain2onion:
+    pasta.cf.: pastagdsp33j7aoq.onion
