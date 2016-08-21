@@ -19,7 +19,7 @@ func (r *FixedResolver) Resolve(
 	domain string,
 	qtype, qclass uint16,
 ) (
-	string,
+	[]string,
 	error,
 ) {
 	var proxies []string
@@ -30,16 +30,16 @@ func (r *FixedResolver) Resolve(
 	} else if qtype == dns.TypeTXT {
 		onion, ok := r.Domain2Onion[domain]
 		if !ok {
-			return "", fmt.Errorf("TXT request of unknown domain: %q", domain)
+			return nil, fmt.Errorf("TXT request of unknown domain: %q", domain)
 		}
 		txt := fmt.Sprintf("onion=%s", onion)
-		return txt, nil
+		return []string{txt}, nil
 	} else {
-		return "", fmt.Errorf("Unknown question type: %d", qtype)
+		return nil, fmt.Errorf("Unknown question type: %d", qtype)
 	}
 	if len(proxies) == 0 {
-		return "", fmt.Errorf("No proxies for question of type %d", qtype)
+		return nil, fmt.Errorf("No proxies for question of type %d", qtype)
 	}
 	i := rand.Intn(len(proxies))
-	return proxies[i], nil
+	return []string{proxies[i]}, nil
 }

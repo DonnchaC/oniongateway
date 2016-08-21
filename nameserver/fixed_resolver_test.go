@@ -19,46 +19,46 @@ func TestFixedResolver(t *testing.T) {
 		},
 	}
 	// IPv4
-	address, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
+	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {
 		t.Fatalf("Failed to resolve %q to IPv4", "example.com.")
 	}
-	if address != "127.0.0.1" {
-		t.Fatalf("Wrong IPv4 address was returned: %q", address)
+	if ips[0] != "127.0.0.1" {
+		t.Fatalf("Wrong IPv4 address was returned: %s", ips)
 	}
 	// IPv6
-	address, err = resolver.Resolve("example.com.", dns.TypeAAAA, dns.ClassINET)
+	ips, err = resolver.Resolve("example.com.", dns.TypeAAAA, dns.ClassINET)
 	if err != nil {
 		t.Fatalf("Failed to resolve %q to IPv6", "example.com.")
 	}
-	if address != "::1" {
-		t.Fatalf("Wrong IPv6 address was returned: %q", address)
+	if ips[0] != "::1" {
+		t.Fatalf("Wrong IPv6 address was returned: %s", ips)
 	}
 	// TXT
-	txt, err := resolver.Resolve("pasta.cf.", dns.TypeTXT, dns.ClassINET)
+	txts, err := resolver.Resolve("pasta.cf.", dns.TypeTXT, dns.ClassINET)
 	if err != nil {
 		t.Fatalf("Failed to get TXT record for %q", "pasta.cf.")
 	}
-	if txt != "onion=pastagdsp33j7aoq.onion" {
-		t.Fatalf("Wrong TXT response was returned: %q", txt)
+	if txts[0] != "onion=pastagdsp33j7aoq.onion" {
+		t.Fatalf("Wrong TXT response was returned: %q", txts)
 	}
 }
 
 func TestFixedResolverAbsent(t *testing.T) {
 	resolver := &FixedResolver{}
 	// IPv4
-	address, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
+	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err == nil {
-		t.Fatalf("IPv4 request expected to fail returned %q", address)
+		t.Fatalf("IPv4 request expected to fail returned %s", ips)
 	}
 	// IPv6
-	address, err = resolver.Resolve("example.com.", dns.TypeAAAA, dns.ClassINET)
+	ips, err = resolver.Resolve("example.com.", dns.TypeAAAA, dns.ClassINET)
 	if err == nil {
-		t.Fatalf("IPv6 request expected to fail returned %q", address)
+		t.Fatalf("IPv6 request expected to fail returned %s", ips)
 	}
 	// TXT
-	txt, err := resolver.Resolve("pasta.cf.", dns.TypeTXT, dns.ClassINET)
+	txts, err := resolver.Resolve("pasta.cf.", dns.TypeTXT, dns.ClassINET)
 	if err == nil {
-		t.Fatalf("TXT request expected to fail returned %q", txt)
+		t.Fatalf("TXT request expected to fail returned %s", txts)
 	}
 }

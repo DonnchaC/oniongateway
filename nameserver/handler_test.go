@@ -11,8 +11,8 @@ import (
 type mockResolver struct {
 }
 
-func (m *mockResolver) Resolve(_ string, _, _ uint16) (string, error) {
-	return "1.1.1.1", nil
+func (m *mockResolver) Resolve(_ string, _, _ uint16) ([]string, error) {
+	return []string{"1.1.1.1"}, nil
 }
 
 func TestHandler(t *testing.T) {
