@@ -22,7 +22,7 @@ type dnsHandler struct {
 }
 
 func (h *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
-	log.Printf("question: %s", r.Question)
+	log.Printf("DNS message: %s", r)
 	if r.Opcode == dns.OpcodeQuery {
 		m := new(dns.Msg)
 		m.SetReply(r)
