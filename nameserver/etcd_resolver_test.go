@@ -77,17 +77,36 @@ func makeEtcdServer() (
 	return
 }
 
-func populateDatabase(client *clientv3.Client, kvs map[string]string) error {
-	kv := clientv3.NewKV(client)
+func changeDatabase(
+	action func(ctx context.Context, key string, value string) error,
+	kvs map[string]string,
+) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	for key, value := range kvs {
-		_, err := kv.Put(ctx, key, value)
-		if err != nil {
+		if err := action(ctx, key, value); err != nil {
 			return fmt.Errorf("Failed to put (%q, %q): %s", key, value, err)
 		}
 	}
 	return nil
+}
+
+func populateDatabase(client *clientv3.Client, kvs map[string]string) error {
+	kv := clientv3.NewKV(client)
+	action := func(ctx context.Context, key string, value string) error {
+		_, err := kv.Put(ctx, key, value)
+		return err
+	}
+	return changeDatabase(action, kvs)
+}
+
+func deleteKeys(client *clientv3.Client, kvs map[string]string) error {
+	kv := clientv3.NewKV(client)
+	action := func(ctx context.Context, key string, _ string) error {
+		_, err := kv.Delete(ctx, key)
+		return err
+	}
+	return changeDatabase(action, kvs)
 }
 
 func TestEtcdResolver(t *testing.T) {
@@ -188,6 +207,52 @@ func TestEtcdResolverMulti(t *testing.T) {
 	}
 	sort.Strings(ips)
 	if ips[0] != "127.0.0.1" || ips[1] != "127.0.0.2" {
+		t.Fatalf("Wrong IPv4 address was returned: %s", ips)
+	}
+}
+
+func TestEtcdResolverChange(t *testing.T) {
+	_, client, closer, err := makeEtcdServer()
+	if err != nil {
+		t.Fatalf("Failed to create etcd server and client: %s", err)
+	}
+	defer closer()
+	data1 := map[string]string{
+		"/ipv4/127.0.0.1": "value is not used",
+	}
+	data2 := map[string]string{
+		"/ipv4/127.0.0.2": "value is not used",
+	}
+	if err = populateDatabase(client, data1); err != nil {
+		t.Fatalf("Failed to populate etcd with example data1: %s", err)
+	}
+	resolver := &EtcdResolver{
+		Client:      client,
+		Timeout:     timeout,
+		AnswerCount: 2,
+	}
+	// Check initial state
+	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
+	if err != nil {
+		t.Fatalf("Failed to resolve %q to IPv4", "example.com.")
+	}
+	if ips[0] != "127.0.0.1" {
+		t.Fatalf("Wrong IPv4 address was returned: %s", ips)
+	}
+	// Change
+	if err = populateDatabase(client, data2); err != nil {
+		t.Fatalf("Failed to populate etcd with example data2: %s", err)
+	}
+	if err = deleteKeys(client, data1); err != nil {
+		t.Fatalf("Failed to delete etcd keys of data1: %s", err)
+	}
+	time.Sleep(time.Second) // give some time to etcd server and client
+	// Check initial state
+	ips, err = resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
+	if err != nil {
+		t.Fatalf("Failed to resolve %q to IPv4", "example.com.")
+	}
+	if ips[0] != "127.0.0.2" {
 		t.Fatalf("Wrong IPv4 address was returned: %s", ips)
 	}
 }
