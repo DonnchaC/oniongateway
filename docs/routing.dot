@@ -1,0 +1,92 @@
+digraph flow {
+
+    rankdir="LR"
+
+    https_client[
+        shape="rectangle"
+    ]
+    resolving_server1[
+        label="8.8.8.8\nresolving\nserver"
+        style="filled"
+        fillcolor="grey"
+    ]
+    pasta_auth_ns[
+        label="pasta.cf registrar\nNS server"
+    ]
+    oniongw_auth_ns[
+        label="oniongw.com registrar\nNS server"
+    ]
+    oniongateway_nameserver[
+        label="1.1.1.1\noniongateway\nnameserver"
+        style="filled"
+        fillcolor="greenyellow"
+    ]
+    oniongateway_entry_proxy[
+        label="2.2.2.2\noniongateway\nentry proxy"
+        style="filled"
+        fillcolor="greenyellow"
+    ]
+    resolving_server2[
+        label="8.8.4.4\nresolving\nserver"
+        style="filled"
+        fillcolor="grey"
+    ]
+    hidden_service[
+        shape="rectangle"
+    ]
+
+    https_client -> resolving_server1[
+        label="1. What is IP of pasta.cf?"
+    ]
+    resolving_server1 -> pasta_auth_ns[
+        label="2. What is IP of pasta.cf?"
+        color="grey"
+    ]
+    pasta_auth_ns -> resolving_server1[
+        label="3. pasta.cf IN NS pastagdsp33j7aoq.onion.oniongw.com"
+        color="grey"
+    ]
+    resolving_server1 -> oniongw_auth_ns[
+        label="4. What is IP of pastagdsp33j7aoq.onion.oniongw.com?"
+        color="grey"
+    ]
+    oniongw_auth_ns -> resolving_server1[
+        label="5. pastagdsp33j7aoq.onion.oniongw.com IN A 1.1.1.1"
+        color="grey"
+    ]
+    resolving_server1 -> oniongateway_nameserver[
+        label="6. What is IP of pasta.cf?"
+        color="grey"
+    ]
+    oniongateway_nameserver -> resolving_server1[
+        label="7. pasta.cf IN A 2.2.2.2"
+        color="grey"
+    ]
+    resolving_server1 -> https_client[
+        label="8. pasta.cf IN A 2.2.2.2"
+    ]
+
+    https_client -> oniongateway_entry_proxy[
+        label="9. TLS request, SNI=pasta.cf"
+        color="blue"
+    ]
+
+    oniongateway_entry_proxy -> resolving_server2[
+        label="10. What is NS of pasta.cf?"
+    ]
+    resolving_server2 -> pasta_auth_ns[
+        label="11. What is NS of pasta.cf?"
+        color="grey"
+    ]
+    pasta_auth_ns -> resolving_server2[
+        label="12. pasta.cf IN NS pastagdsp33j7aoq.onion.oniongw.com"
+        color="grey"
+    ]
+    resolving_server2 -> oniongateway_entry_proxy[
+        label="13. pasta.cf IN NS pastagdsp33j7aoq.onion.oniongw.com"
+    ]
+    oniongateway_entry_proxy -> hidden_service[
+        label="14. Connects pastagdsp33j7aoq.onion"
+    ]
+
+}
