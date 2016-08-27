@@ -133,7 +133,7 @@ func TestEtcdResolver(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to resolve %q to IPv4", "example.com.")
 	}
-	if ips[0] != "127.0.0.1" {
+	if len(ips) < 1 || ips[0] != "127.0.0.1" {
 		t.Fatalf("Wrong IPv4 address was returned: %s", ips)
 	}
 	// IPv6
@@ -141,7 +141,7 @@ func TestEtcdResolver(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to resolve %q to IPv6", "example.com.")
 	}
-	if ips[0] != "::1" {
+	if len(ips) < 1 || ips[0] != "::1" {
 		t.Fatalf("Wrong IPv6 address was returned: %s", ips)
 	}
 	// TXT
@@ -203,10 +203,10 @@ func TestEtcdResolverMulti(t *testing.T) {
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {
-		t.Fatalf("Failed to resolve %q to IPv4", "example.com.")
+		t.Fatalf("Failed to resolve %q to IPv4: %s", "example.com.", err)
 	}
 	sort.Strings(ips)
-	if ips[0] != "127.0.0.1" || ips[1] != "127.0.0.2" {
+	if len(ips) < 2 || ips[0] != "127.0.0.1" || ips[1] != "127.0.0.2" {
 		t.Fatalf("Wrong IPv4 address was returned: %s", ips)
 	}
 }
@@ -236,7 +236,7 @@ func TestEtcdResolverChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to resolve %q to IPv4", "example.com.")
 	}
-	if ips[0] != "127.0.0.1" {
+	if len(ips) < 1 || ips[0] != "127.0.0.1" {
 		t.Fatalf("Wrong IPv4 address was returned: %s", ips)
 	}
 	// Change
@@ -252,7 +252,7 @@ func TestEtcdResolverChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to resolve %q to IPv4", "example.com.")
 	}
-	if ips[0] != "127.0.0.2" {
+	if len(ips) < 1 || ips[0] != "127.0.0.2" {
 		t.Fatalf("Wrong IPv4 address was returned: %s", ips)
 	}
 }
