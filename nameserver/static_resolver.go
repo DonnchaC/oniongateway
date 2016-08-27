@@ -15,6 +15,13 @@ type StaticResolver struct {
 	AnswerCount  int
 }
 
+// Start does nothing
+func (r *StaticResolver) Start() {
+	if r.AnswerCount == 0 {
+		panic("StaticResolver: set AnswerCount")
+	}
+}
+
 // Resolve fetches result value for DNS request from memory
 func (r *StaticResolver) Resolve(
 	domain string,

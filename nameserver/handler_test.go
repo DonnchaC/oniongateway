@@ -15,6 +15,9 @@ func (m *mockResolver) Resolve(_ string, _, _ uint16) ([]string, error) {
 	return []string{"1.1.1.1", "2.2.2.2"}, nil
 }
 
+func (m *mockResolver) Start() {
+}
+
 func TestHandler(t *testing.T) {
 	dnsListener, err := net.ListenPacket("udp", "127.0.0.1:0")
 	if err != nil {

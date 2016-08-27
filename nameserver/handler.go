@@ -9,6 +9,7 @@ import (
 
 // Resolver fetches result value for DNS request
 type Resolver interface {
+	Start()
 	Resolve(domain string, qtype, qclass uint16) ([]string, error)
 }
 

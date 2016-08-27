@@ -128,6 +128,7 @@ func TestEtcdResolver(t *testing.T) {
 		Timeout:     timeout,
 		AnswerCount: 1,
 	}
+	resolver.Start()
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {
@@ -165,6 +166,7 @@ func TestEmptyResolverAbsent(t *testing.T) {
 		Timeout:     timeout,
 		AnswerCount: 1,
 	}
+	resolver.Start()
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err == nil {
@@ -200,6 +202,7 @@ func TestEtcdResolverMulti(t *testing.T) {
 		Timeout:     timeout,
 		AnswerCount: 2,
 	}
+	resolver.Start()
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {
@@ -231,6 +234,7 @@ func TestEtcdResolverChange(t *testing.T) {
 		Timeout:     timeout,
 		AnswerCount: 2,
 	}
+	resolver.Start()
 	// Check initial state
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {

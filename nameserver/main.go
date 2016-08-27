@@ -74,11 +74,12 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error creating etcd client: %s", err)
 		}
-		handler.resolver = &EtcdResolver{
+		resolver := EtcdResolver{
 			Client:      client,
 			Timeout:     *etcdTimeout,
 			AnswerCount: *answerCount,
 		}
+		handler.resolver = &resolver
 	} else {
 		log.Fatalf("Provide one of -static-config and -etcd-endpoints")
 	}
@@ -86,6 +87,9 @@ func main() {
 		Addr:    *listenAddr,
 		Net:     *listenNet,
 		Handler: &handler,
+		NotifyStartedFunc: func() {
+			handler.resolver.Start()
+		},
 	}
 	err := server.ListenAndServe()
 	defer server.Shutdown()
