@@ -129,6 +129,7 @@ func TestEtcdResolver(t *testing.T) {
 		AnswerCount: 1,
 	}
 	resolver.Start()
+	time.Sleep(time.Second) // watcher is getting updates from etcd server
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {
@@ -167,6 +168,7 @@ func TestEmptyResolverAbsent(t *testing.T) {
 		AnswerCount: 1,
 	}
 	resolver.Start()
+	time.Sleep(time.Second) // watcher is getting updates from etcd server
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err == nil {
@@ -203,6 +205,7 @@ func TestEtcdResolverMulti(t *testing.T) {
 		AnswerCount: 2,
 	}
 	resolver.Start()
+	time.Sleep(time.Second) // watcher is getting updates from etcd server
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {
@@ -235,6 +238,7 @@ func TestEtcdResolverChange(t *testing.T) {
 		AnswerCount: 2,
 	}
 	resolver.Start()
+	time.Sleep(time.Second) // watcher is getting updates from etcd server
 	// Check initial state
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {

@@ -30,57 +30,27 @@ func (r *EtcdResolver) Start() {
 	}
 	r.ipResolver.AnswerCount = r.AnswerCount
 	r.ipResolver.Start()
-	rev := r.fetchState()
-	go r.watch(rev)
+	go r.watch()
 }
 
-func (r *EtcdResolver) fetchState() int64 {
-	kv := clientv3.NewKV(r.Client)
-	ctx := context.Background()
-	fetchStateFor := func(prefix string, rev int64) ([]string, int64) {
-		options := []clientv3.OpOption{clientv3.WithPrefix()}
-		if rev != -1 {
-			// read IPv6 with the same revision as IPv4
-			// TODO WithRev(magic number) means "current rev"?
-			options = append(options, clientv3.WithRev(rev))
-		}
-		resp, err := kv.Get(ctx, prefix, options...)
-		if err != nil {
-			panic(fmt.Sprintf("etcd GET %s error %s", prefix, err))
-		}
-		var result []string
-		n := len(resp.Kvs)
-		for i := 0; i < n; i++ {
-			key := string(resp.Kvs[i].Key)
-			address := path.Base(key)
-			result = append(result, address)
-		}
-		return result, resp.Header.Revision
-	}
-	ipv4proxies, rev := fetchStateFor("/ipv4/", -1)
-	ipv6proxies, _ := fetchStateFor("/ipv6/", rev)
-	r.ipResolver.IPv4Proxies = ipv4proxies
-	r.ipResolver.IPv6Proxies = ipv6proxies
-	return rev
-}
-
-func (r *EtcdResolver) watch(rev int64) {
-	go r.watchFor(&r.ipResolver.IPv4Proxies, "/ipv4/", rev + 1)
-	go r.watchFor(&r.ipResolver.IPv6Proxies, "/ipv6/", rev + 1)
+func (r *EtcdResolver) watch() {
+	log.Printf("Running etcd watcher of nameserver...")
+	go r.watchFor(&r.ipResolver.IPv4Proxies, "/ipv4/")
+	go r.watchFor(&r.ipResolver.IPv6Proxies, "/ipv6/")
 }
 
 func (r *EtcdResolver) watchFor(
 	addresses *[]string,
 	prefix string,
-	rev int64,
 ) {
 	watcher := clientv3.NewWatcher(r.Client)
 	ctx := context.Background()
+	const historyStart = 1
 	ipv4Chan := watcher.Watch(
 		ctx,
 		prefix,
 		clientv3.WithPrefix(),
-		clientv3.WithRev(rev),
+		clientv3.WithRev(historyStart),
 	)
 	for {
 		resp := <-ipv4Chan
