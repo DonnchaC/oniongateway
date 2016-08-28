@@ -43,6 +43,10 @@ func (r *EtcdResolver) watchFor(
 	addresses *[]string,
 	prefix string,
 ) {
+	address2index := make(map[string]int, len(*addresses))
+	for index, address := range *addresses {
+		address2index[address] = index
+	}
 	watcher := clientv3.NewWatcher(r.Client)
 	ctx := context.Background()
 	const historyStart = 1
@@ -58,30 +62,41 @@ func (r *EtcdResolver) watchFor(
 			break
 		}
 		for _, event := range resp.Events {
-			r.processEvent(addresses, event)
+			r.processEvent(addresses, address2index, event)
 		}
 	}
 }
 
-func (r *EtcdResolver) processEvent(addresses *[]string, event *clientv3.Event) {
+func (r *EtcdResolver) processEvent(
+	addresses *[]string,
+	address2index map[string]int,
+	event *clientv3.Event,
+) {
 	r.ipResolverMutex.Lock()
 	defer r.ipResolverMutex.Unlock()
 	key := string(event.Kv.Key)
 	address := path.Base(key)
 	if event.Type == mvccpb.PUT {
 		if event.IsCreate() {
+			if _, has := address2index[address]; has {
+				panic(fmt.Sprintf("Existing address %s added", address))
+			}
+			address2index[address] = len(*addresses)
 			*addresses = append(*addresses, address)
 			log.Printf("Address %s was added", key)
 		}
 	} else if event.Type == mvccpb.DELETE {
-		// TODO avoid O(N) here
-		var newAddresses []string
-		for _, address1 := range *addresses {
-			if address1 != address {
-				newAddresses = append(newAddresses, address1)
-			}
+		index, has := address2index[address]
+		if !has {
+			panic(fmt.Sprintf("Absent address %s removed", address))
 		}
-		*addresses = newAddresses
+		// move last element to `index`
+		lastIndex := len(*addresses) - 1
+		lastAddress := (*addresses)[lastIndex]
+		address2index[lastAddress] = index
+		(*addresses)[index] = lastAddress
+		*addresses = (*addresses)[:lastIndex]
+		delete(address2index, address)
 		log.Printf("Address %s was removed", key)
 	} else {
 		panic(fmt.Sprintf("Unknown event type %d", event.Type))
