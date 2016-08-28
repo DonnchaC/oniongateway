@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"path"
 	"sync"
 	"time"
@@ -100,6 +101,7 @@ func (r *EtcdResolver) processEvent(addresses *[]string, event *clientv3.Event) 
 	if event.Type == mvccpb.PUT {
 		if event.IsCreate() {
 			*addresses = append(*addresses, address)
+			log.Printf("Address %s was added", key)
 		}
 	} else if event.Type == mvccpb.DELETE {
 		// TODO avoid O(N) here
@@ -110,6 +112,7 @@ func (r *EtcdResolver) processEvent(addresses *[]string, event *clientv3.Event) 
 			}
 		}
 		*addresses = newAddresses
+		log.Printf("Address %s was removed", key)
 	} else {
 		panic(fmt.Sprintf("Unknown event type %d", event.Type))
 	}
