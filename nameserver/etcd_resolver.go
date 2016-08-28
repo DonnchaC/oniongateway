@@ -64,8 +64,8 @@ func (r *EtcdResolver) fetchState() int64 {
 }
 
 func (r *EtcdResolver) watch(rev int64) {
-	go r.watchFor(&r.ipResolver.IPv4Proxies, "/ipv4/", rev)
-	go r.watchFor(&r.ipResolver.IPv6Proxies, "/ipv6/", rev)
+	go r.watchFor(&r.ipResolver.IPv4Proxies, "/ipv4/", rev + 1)
+	go r.watchFor(&r.ipResolver.IPv6Proxies, "/ipv6/", rev + 1)
 }
 
 func (r *EtcdResolver) watchFor(
