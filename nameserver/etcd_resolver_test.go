@@ -242,7 +242,7 @@ func TestEtcdResolverChange(t *testing.T) {
 	// Check initial state
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {
-		t.Fatalf("Failed to resolve %q to IPv4", "example.com.")
+		t.Fatalf("Failed to resolve %q to IPv4: %s", "example.com.", err)
 	}
 	if len(ips) < 1 || ips[0] != "127.0.0.1" {
 		t.Fatalf("Wrong IPv4 address was returned: %s", ips)
