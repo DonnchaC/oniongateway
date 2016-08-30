@@ -15,9 +15,10 @@ import (
 
 // EtcdResolver resolves DNS requests from etcd
 type EtcdResolver struct {
-	Client      *clientv3.Client
-	Timeout     time.Duration
-	AnswerCount int
+	Client            *clientv3.Client
+	Timeout           time.Duration
+	AnswerCount       int
+	NotifyChangedFunc func(added bool, key string)
 
 	ipResolver      StaticResolver
 	ipResolverMutex sync.RWMutex
@@ -84,6 +85,9 @@ func (r *EtcdResolver) processEvent(
 			address2index[address] = len(*addresses)
 			*addresses = append(*addresses, address)
 			log.Printf("Address %s was added", key)
+			if r.NotifyChangedFunc != nil {
+				r.NotifyChangedFunc(true, key)
+			}
 		}
 	} else if event.Type == mvccpb.DELETE {
 		index, has := address2index[address]
@@ -98,6 +102,9 @@ func (r *EtcdResolver) processEvent(
 		*addresses = (*addresses)[:lastIndex]
 		delete(address2index, address)
 		log.Printf("Address %s was removed", key)
+		if r.NotifyChangedFunc != nil {
+			r.NotifyChangedFunc(false, key)
+		}
 	} else {
 		panic(fmt.Sprintf("Unknown event type %d", event.Type))
 	}

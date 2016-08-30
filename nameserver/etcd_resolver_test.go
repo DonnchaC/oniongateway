@@ -123,13 +123,18 @@ func TestEtcdResolver(t *testing.T) {
 	if err = populateDatabase(client, data); err != nil {
 		t.Fatalf("Failed to populate etcd with example data: %s", err)
 	}
+	changed := make(chan bool)
 	resolver := &EtcdResolver{
 		Client:      client,
 		Timeout:     timeout,
 		AnswerCount: 1,
+		NotifyChangedFunc: func(added bool, key string) {
+			changed <- true
+		},
 	}
 	resolver.Start()
-	time.Sleep(time.Second) // watcher is getting updates from etcd server
+	<-changed
+	<-changed
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {
@@ -168,7 +173,6 @@ func TestEmptyResolverAbsent(t *testing.T) {
 		AnswerCount: 1,
 	}
 	resolver.Start()
-	time.Sleep(time.Second) // watcher is getting updates from etcd server
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err == nil {
@@ -199,13 +203,18 @@ func TestEtcdResolverMulti(t *testing.T) {
 	if err = populateDatabase(client, data); err != nil {
 		t.Fatalf("Failed to populate etcd with example data: %s", err)
 	}
+	changed := make(chan bool)
 	resolver := &EtcdResolver{
 		Client:      client,
 		Timeout:     timeout,
 		AnswerCount: 2,
+		NotifyChangedFunc: func(added bool, key string) {
+			changed <- true
+		},
 	}
 	resolver.Start()
-	time.Sleep(time.Second) // watcher is getting updates from etcd server
+	<-changed
+	<-changed
 	// IPv4
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {
@@ -232,13 +241,17 @@ func TestEtcdResolverChange(t *testing.T) {
 	if err = populateDatabase(client, data1); err != nil {
 		t.Fatalf("Failed to populate etcd with example data1: %s", err)
 	}
+	changed := make(chan bool)
 	resolver := &EtcdResolver{
 		Client:      client,
 		Timeout:     timeout,
 		AnswerCount: 2,
+		NotifyChangedFunc: func(added bool, key string) {
+			changed <- true
+		},
 	}
 	resolver.Start()
-	time.Sleep(time.Second) // watcher is getting updates from etcd server
+	<-changed
 	// Check initial state
 	ips, err := resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {
@@ -251,10 +264,11 @@ func TestEtcdResolverChange(t *testing.T) {
 	if err = populateDatabase(client, data2); err != nil {
 		t.Fatalf("Failed to populate etcd with example data2: %s", err)
 	}
+	<-changed
 	if err = deleteKeys(client, data1); err != nil {
 		t.Fatalf("Failed to delete etcd keys of data1: %s", err)
 	}
-	time.Sleep(time.Second) // give some time to etcd server and client
+	<-changed
 	// Check initial state
 	ips, err = resolver.Resolve("example.com.", dns.TypeA, dns.ClassINET)
 	if err != nil {
