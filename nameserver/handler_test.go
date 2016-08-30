@@ -3,7 +3,6 @@ package main
 import (
 	"net"
 	"testing"
-	"time"
 
 	"github.com/miekg/dns"
 )
@@ -24,14 +23,18 @@ func TestHandler(t *testing.T) {
 		t.Fatalf("Failed to create UDP listener: %s", err)
 	}
 	dnsAddr := dnsListener.LocalAddr().String()
+	started := make(chan bool)
 	server := &dns.Server{
 		Net:        "udp",
 		PacketConn: dnsListener,
 		Handler:    &dnsHandler{resolver: &mockResolver{}},
+		NotifyStartedFunc: func() {
+			started <- true
+		},
 	}
 	go server.ActivateAndServe()
 	defer server.Shutdown()
-	time.Sleep(time.Second) // race: time to start DNS server
+	<-started
 	// DNS client
 	dnsMessage := &dns.Msg{}
 	dnsMessage.SetQuestion("example.com.", dns.TypeA)
