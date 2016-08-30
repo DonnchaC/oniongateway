@@ -16,7 +16,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-const timeout = 5 * time.Second
+const timeout = 10 * time.Second
 
 func makeEtcdServer() (
 	server *embed.Etcd,
