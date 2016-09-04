@@ -12,6 +12,7 @@ See also:
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -45,6 +46,17 @@ func main() {
 	)
 
 	flag.Parse()
+
+	// Check if Tor2Web mode is enabled.
+	// Tor does not provide access to clearnet sites in Tor2Web mode.
+	dialer := NewSocksDialer(*proxyNet, *proxyAddr)
+	site4test := "check.torproject.org:443"
+	if _, err := dialer.Dial(site4test); err == nil {
+		log.Printf(
+			"Warning: Tor can access %s, probably Tor2Web mode is off\n",
+			site4test,
+		)
+	}
 
 	if *httpRedirect != "" {
 		redirectingServer, err := NewRedirect(*httpRedirect, *entryProxy)
