@@ -67,7 +67,8 @@ func main() {
 		go redirectingServer.ListenAndServe()
 	}
 
-	proxy := NewTLSProxy(*onionPort, *proxyNet, *proxyAddr)
+	resolver := NewDnsHostToOnionResolver()
+	proxy := NewTLSProxy(*onionPort, *proxyNet, *proxyAddr, resolver)
 	proxy.Listen("tcp", *entryProxy)
 	proxy.Start()
 }

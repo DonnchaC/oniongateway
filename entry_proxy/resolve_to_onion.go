@@ -17,14 +17,18 @@ func (r RealTxtResolver) LookupTXT(hostname string) ([]string, error) {
 	return txts, err
 }
 
-type HostToOnionResolver struct {
+type HostToOnionResolver interface {
+	ResolveToOnion(hostname string) (onion string, err error)
+}
+
+type DnsHostToOnionResolver struct {
 	regex       *regexp.Regexp
 	txtResolver TxtResolver
 }
 
-func NewHostToOnionResolver() HostToOnionResolver {
+func NewDnsHostToOnionResolver() *DnsHostToOnionResolver {
 	var err error
-	o := HostToOnionResolver{
+	o := &DnsHostToOnionResolver{
 		txtResolver: RealTxtResolver{},
 	}
 	o.regex, err = regexp.Compile("(^| )onion=([a-z0-9]{16}.onion)( |$)")
@@ -34,7 +38,7 @@ func NewHostToOnionResolver() HostToOnionResolver {
 	return o
 }
 
-func (o *HostToOnionResolver) ResolveToOnion(hostname string) (onion string, err error) {
+func (o *DnsHostToOnionResolver) ResolveToOnion(hostname string) (onion string, err error) {
 	txts, err := o.txtResolver.LookupTXT(hostname)
 	if err != nil {
 		return

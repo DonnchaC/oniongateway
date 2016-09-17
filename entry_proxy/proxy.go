@@ -66,13 +66,17 @@ type TLSProxy struct {
 	listener  net.Listener
 }
 
-func NewTLSProxy(onionPort int, proxyNet, proxyAddr string) *TLSProxy {
+func NewTLSProxy(
+	onionPort int,
+	proxyNet, proxyAddr string,
+	resolver HostToOnionResolver,
+) *TLSProxy {
 	t := TLSProxy{
 		onionPort: onionPort,
 		proxyNet:  proxyNet,
 		proxyAddr: proxyAddr,
 		sniParser: RealSNIParser{},
-		resolver:  NewHostToOnionResolver(),
+		resolver:  resolver,
 		dialer:    NewSocksDialer(proxyNet, proxyAddr),
 	}
 	return &t
@@ -110,7 +114,7 @@ func (t *TLSProxy) ProcessRequest(clientConn net.Conn) {
 	}
 	onion, err := t.resolver.ResolveToOnion(hostname)
 	if err != nil {
-		log.Printf("Unable to resolve %s using DNS TXT: %s", hostname, err)
+		log.Printf("Unable to resolve %s to onion: %s", hostname, err)
 		return
 	}
 	log.Printf("%s was resolved to %s", hostname, onion)
