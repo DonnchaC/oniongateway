@@ -1,8 +1,11 @@
 package main
 
 import (
+	"crypto/tls"
+	"io"
 	"net"
 	"net/http"
+	"strings"
 )
 
 // NewRedirect returns redirecting HTTP server,
@@ -12,6 +15,13 @@ func NewRedirect(listenOn, redirectTo string) (*http.Server, error) {
 	_, port, err := net.SplitHostPort(redirectTo)
 	if err != nil {
 		return nil, err
+	}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
 	}
 	server := &http.Server{
 		Addr: listenOn,
@@ -27,7 +37,26 @@ func NewRedirect(listenOn, redirectTo string) (*http.Server, error) {
 					host = net.JoinHostPort(host, port)
 				}
 				newURL.Host = host
-				http.Redirect(w, r, newURL.String(), http.StatusMovedPermanently)
+				path := newURL.Path
+				if strings.HasPrefix(path, "/.well-known/acme-challenge/") {
+					// https://github.com/DonnchaC/oniongateway/issues/18
+					// proxy /.well-known/acme-challenge/ to HTTPS
+					resp, err := client.Get(newURL.String())
+					if err != nil {
+						w.WriteHeader(http.StatusBadGateway)
+						return
+					}
+					defer resp.Body.Close()
+					w.WriteHeader(resp.StatusCode)
+					io.Copy(w, resp.Body)
+				} else {
+					http.Redirect(
+						w,
+						r,
+						newURL.String(),
+						http.StatusMovedPermanently,
+					)
+				}
 			},
 		),
 	}
