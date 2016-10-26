@@ -185,9 +185,10 @@ func TestTLSProxy(t *testing.T) {
 	fakeTorAddr := fakeTorListener.mortalService.listener.Addr().String()
 
 	proxyNet := "tcp"
-	proxy := NewTLSProxy(443, fakeTorNet, fakeTorAddr)
+	resolver := NewDnsHostToOnionResolver()
+	resolver.txtResolver = MockTxtResolver{}
+	proxy := NewTLSProxy(443, fakeTorNet, fakeTorAddr, resolver)
 	proxy.sniParser = MockSNIParser{}
-	proxy.resolver.txtResolver = MockTxtResolver{}
 	proxy.dialer = NewMockProxyDialer(fakeTorNet, fakeTorAddr)
 	proxy.Listen(proxyNet, "127.0.0.1:0")
 	go proxy.Start()

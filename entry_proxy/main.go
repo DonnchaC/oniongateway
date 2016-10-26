@@ -12,8 +12,11 @@ See also:
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+
+	"gopkg.in/yaml.v2"
 )
 
 func main() {
@@ -43,6 +46,11 @@ func main() {
 			443,
 			"Port on onion site to use",
 		)
+		hostToOnionTable = flag.String(
+			"host-to-onion",
+			"",
+			"Yaml file with host->onion map, disables DNS based resolver",
+		)
 	)
 
 	flag.Parse()
@@ -67,7 +75,23 @@ func main() {
 		go redirectingServer.ListenAndServe()
 	}
 
-	proxy := NewTLSProxy(*onionPort, *proxyNet, *proxyAddr)
+	var resolver HostToOnionResolver
+	if *hostToOnionTable != "" {
+		log.Printf("Using host2onion map from file %s", *hostToOnionTable)
+		configData, err := ioutil.ReadFile(*hostToOnionTable)
+		if err != nil {
+			log.Fatalf("Error reading %s: %s", *hostToOnionTable, err)
+		}
+		var staticResolver StaticResolver
+		err = yaml.Unmarshal(configData, &staticResolver)
+		if err != nil {
+			log.Fatalf("Error parsing %s: %s", *hostToOnionTable, err)
+		}
+		resolver = &staticResolver
+	} else {
+		resolver = NewDnsHostToOnionResolver()
+	}
+	proxy := NewTLSProxy(*onionPort, *proxyNet, *proxyAddr, resolver)
 	proxy.Listen("tcp", *entryProxy)
 	proxy.Start()
 }

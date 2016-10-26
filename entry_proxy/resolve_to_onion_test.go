@@ -12,7 +12,7 @@ func (o EmptyMockTxtResolver) LookupTXT(hostname string) ([]string, error) {
 }
 
 func TestEmptyMockTxtResolver(t *testing.T) {
-	resolver := NewHostToOnionResolver()
+	resolver := NewDnsHostToOnionResolver()
 	resolver.txtResolver = EmptyMockTxtResolver{}
 	_, err := resolver.ResolveToOnion("example.com")
 	if err == nil {
@@ -27,7 +27,7 @@ func (o NoOnionsMockTxtResolver) LookupTXT(hostname string) ([]string, error) {
 }
 
 func TestNoOnionsMockTxtResolver(t *testing.T) {
-	resolver := NewHostToOnionResolver()
+	resolver := NewDnsHostToOnionResolver()
 	resolver.txtResolver = NoOnionsMockTxtResolver{}
 	_, err := resolver.ResolveToOnion("example.com")
 	if err == nil {
@@ -42,7 +42,7 @@ func (o ThrowingMockTxtResolver) LookupTXT(hostname string) ([]string, error) {
 }
 
 func TestThrowingMockTxtResolver(t *testing.T) {
-	resolver := NewHostToOnionResolver()
+	resolver := NewDnsHostToOnionResolver()
 	resolver.txtResolver = ThrowingMockTxtResolver{}
 	_, err := resolver.ResolveToOnion("example.com")
 	if err == nil {
