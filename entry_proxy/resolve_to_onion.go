@@ -27,15 +27,10 @@ type DnsHostToOnionResolver struct {
 }
 
 func NewDnsHostToOnionResolver() *DnsHostToOnionResolver {
-	var err error
-	o := &DnsHostToOnionResolver{
+	return &DnsHostToOnionResolver{
 		txtResolver: RealTxtResolver{},
+		regex:       regexp.MustCompile("(^| )onion=([a-z0-9]{16}.onion)( |$)"),
 	}
-	o.regex, err = regexp.Compile("(^| )onion=([a-z0-9]{16}.onion)( |$)")
-	if err != nil {
-		panic("wtf: failed to compile regex")
-	}
-	return o
 }
 
 func (o *DnsHostToOnionResolver) ResolveToOnion(hostname string) (onion string, err error) {
