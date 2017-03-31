@@ -51,6 +51,11 @@ func main() {
 			"",
 			"Yaml file with host->onion map, disables DNS based resolver",
 		)
+		parentHost = flag.String(
+			"parent-host",
+			"",
+			"Read onion address in subdomain of specified domain, disables DNS based resolver",
+		)
 	)
 
 	flag.Parse()
@@ -88,10 +93,16 @@ func main() {
 			log.Fatalf("Error parsing %s: %s", *hostToOnionTable, err)
 		}
 		resolver = &staticResolver
+	} else if *parentHost != "" {
+		log.Printf("Using domain %s as parent host", *parentHost)
+		resolver = NewSubdomainResolver(*parentHost)
 	} else {
 		resolver = NewDnsHostToOnionResolver()
 	}
+
 	proxy := NewTLSProxy(*onionPort, *proxyNet, *proxyAddr, resolver)
 	proxy.Listen("tcp", *entryProxy)
+
+	log.Printf("starting entry proxy")
 	proxy.Start()
 }
