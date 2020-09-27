@@ -3,7 +3,9 @@ services:
   tor2web:
     build: tor2web
     restart: always
-  entryproxy:
-    build: entry_proxy
+  entry_proxy:
+    build: .
     depends_on:
       - tor2web
+    volumes:
+      - ./host2onion.yml:/etc/host2onion.yml
