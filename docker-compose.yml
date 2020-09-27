@@ -7,5 +7,6 @@ services:
     build: .
     depends_on:
       - tor2web
+    command: -host-to-onion /etc/host2onion.yaml
     volumes:
-      - ./host2onion.yml:/etc/host2onion.yml
+      - ${PWD}/host2onion.yaml:/etc/host2onion.yaml

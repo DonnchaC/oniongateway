@@ -12,4 +12,4 @@ RUN go build .
 
 EXPOSE 80
 EXPOSE 443
-CMD ["entry_proxy"]
+CMD ["./entry_proxy "]
