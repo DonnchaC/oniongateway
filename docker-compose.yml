@@ -1,0 +1,9 @@
+version: '3.2'
+services:
+  tor2web:
+    build: tor2web
+    restart: always
+  entryproxy:
+    build: entryproxy
+    depends_on:
+      - tor2web

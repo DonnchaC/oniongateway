@@ -5,6 +5,7 @@ RUN adduser -G abuild -g "Alpine Package Builder" -s /bin/sh -D builder \
   && echo "builder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 USER builder
+WORKDIR /home/builder
 
 RUN sudo apk add --update alpine-sdk \
   && abuild-keygen -i -a \
@@ -14,7 +15,7 @@ RUN sudo apk add --update alpine-sdk \
   && abuild verify && abuild -r \
   && cd ~/packages/community/x86_64 \
   && sudo apk add --allow-untrusted tor-0.*.apk \
-  && rm -Rf /aports \
+  && rm -Rf ~/aports \
   && sudo apk del alpine-sdk
 
 USER root
