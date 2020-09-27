@@ -4,6 +4,6 @@ services:
     build: tor2web
     restart: always
   entryproxy:
-    build: entryproxy
+    build: entry_proxy
     depends_on:
       - tor2web
