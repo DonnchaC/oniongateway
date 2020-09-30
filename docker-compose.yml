@@ -7,11 +7,11 @@ services:
     build: .
     depends_on:
       - tor2web
-    command: ./entry_proxy -host-to-onion /etc/host2onion.yaml
+    command: ./entry_proxy -host-to-onion /etc/host2onion.yaml -proxyAddr tor2web:9050
     ports:
       - 80:80
       - 443:443
     volumes:
-      - type: bind:
+      - type: bind
         source: ${PWD}/host2onion.yaml
         target: /etc/host2onion.yaml
