@@ -1,0 +1,3 @@
+SocksPort 0.0.0.0:9050
+
+UseEntryGuards 0

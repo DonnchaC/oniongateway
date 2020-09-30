@@ -1,4 +1,0 @@
-SocksPort 0.0.0.0:9050
-
-UseEntryGuards 0
-Tor2webMode 1
