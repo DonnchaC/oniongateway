@@ -29,23 +29,18 @@ type ProxyDialer interface {
 type SocksDialer struct {
 	proxyNet  string
 	proxyAddr string
-	auth      proxy.Auth
 }
 
 func NewSocksDialer(proxyNet, proxyAddr string) *SocksDialer {
 	s := SocksDialer{
 		proxyNet:  proxyNet,
 		proxyAddr: proxyAddr,
-		auth: proxy.Auth{
-			User:     "",
-			Password: "",
-		},
 	}
 	return &s
 }
 
 func (t *SocksDialer) Dial(targetServer string) (net.Conn, error) {
-	dialer, err := proxy.SOCKS5(t.proxyNet, t.proxyAddr, &t.auth, proxy.Direct)
+	dialer, err := proxy.SOCKS5(t.proxyNet, t.proxyAddr, nil, proxy.Direct)
 	if err != nil {
 		return nil, err
 	}
