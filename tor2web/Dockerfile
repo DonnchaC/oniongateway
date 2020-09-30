@@ -1,6 +1,6 @@
 FROM alpine:latest
 
-RUN apk add --no-cache wget
+RUN apk add --no-cache tor
 
 EXPOSE 9050
 
